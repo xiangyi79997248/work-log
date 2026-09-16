@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>工程出工人數與施工日誌管理系統（雲端同步版）</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 12px;
+            color: #333;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            max-width: 1850px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .header-banner {
+            background: linear-gradient(135deg, #005757 0%, #336666 100%) !important;
+            color: white;
+            padding: 14px 18px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+        .header-row-1 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .header-logo-area {
+            display: flex;
+            align-items: center;
+        }
+        .header-logo-area img {
+            height: 40px !important;
+            width: auto !important;
+            max-height: 40px !important;
+            object-fit: contain !important;
+            background: transparent !important;
+            padding: 0 !important;
+            display: block !important;
+        }
+        .header-row-1-title {
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .header-row-2-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            padding-top: 8px;
+            opacity: 0.98;
+        }
+
+        .control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .control-group input, .control-group select {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        
+        .btn-red { background-color: #336666 !important; color: #ffffff !important; font-weight: bold; }
+        .btn-blue { background-color: #66B3FF !important; color: #fff !important; font-weight: bold; }
+        .btn-yellow { background-color: #D2A2CC !important; color: #3a1a35 !important; font-weight: bold; }
+        .btn-green { background-color: #FFD306 !important; color: #333300 !important; font-weight: bold; }
+        .btn-sm { padding: 4px 10px; font-size: 13px; }
+
+        .cloud-sync-bar {
+            background: #d9ead3;
+            border: 1px solid #b6d7a8;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: #274027;
+        }
+
+        .project-meta-panel {
+            background: #b6d7a8;
+            border: 1px solid #93c47d;
+            padding: 14px 18px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            align-items: center;
+            font-size: 14px;
+            color: #1e331e;
+        }
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .meta-item input, .meta-item select {
+            padding: 6px 10px;
+            border: 1px solid #93c47d;
+            border-radius: 4px;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+        .tab-btn {
+            padding: 8px 16px;
+            background-color: #e9ecef;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            color: #495057;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .tab-btn.active { background-color: #336666; color: white; }
+        
+        .tab-btn.warranty-tab { background-color: #CF9E9E; color: #3a1a1a; }
+        .tab-btn.warranty-tab.active { background-color: #B58484; color: #fff; }
+
+        .tab-btn.report-tab { background-color: #5B5B00; color: #fff; }
+        .tab-btn.report-tab.active { background-color: #454500; color: #fff; }
+
+        .tab-btn.log-tab { background-color: #81C0C0; color: #113333; }
+        .tab-btn.log-tab.active { background-color: #5FA5A5; color: #fff; }
+
+        .tab-btn.export-tab { background-color: #9999CC; color: #222244; }
+        .tab-btn.export-tab.active { background-color: #7777AA; color: #fff; }
+
+        .close-site, .edit-site {
+            background: rgba(0,0,0,0.2); color: #fff; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer;
+        }
+        .close-site:hover, .edit-site:hover { background: rgba(0,0,0,0.5); }
+
+        .table-responsive {
+            max-height: 720px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            table-layout: fixed;
+            min-width: 1200px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px 6px;
+            text-align: center;
+            font-size: 13px;
+            position: relative;
+            overflow: hidden;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #D1E9E9;
+            color: #1a202c;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 14px;
+            user-select: none;
+        }
+        .resizer {
+            position: absolute; top: 0; right: 0; width: 10px; cursor: col-resize; user-select: none; touch-action: none; height: 100%;
+            z-index: 20;
+        }
+        .resizer:hover, .resizing { background-color: #3182ce; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        textarea.resizable-box {
+            width: 95%; min-height: 50px; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; resize: both;
+            text-align: left;
+            line-height: 1.4;
+        }
+        .worker-selector {
+            display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-items: center;
+        }
+        .worker-badge {
+            display: inline-flex; align-items: center; gap: 3px; background: #edf2f7; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid #cbd5e0;
+        }
+        .worker-badge input { cursor: pointer; }
+        .unworked-display {
+            color: #e53e3e; font-weight: bold; background: #fff5f5; padding: 5px 6px; border-radius: 4px; border: 1px solid #fed7d7; display: inline-block; font-size: 12px;
+        }
+        .report-section {
+            background: #f1f5f9; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #cbd5e0;
+        }
+        .report-box {
+            background: #fff; padding: 12px; border: 1px solid #94a3b8; border-radius: 6px; white-space: pre-wrap; font-family: monospace; font-size: 14px; margin-bottom: 10px;
+        }
+        .config-area {
+            margin-bottom: 15px; background: #93c47d; padding: 12px; border: 1px solid #b6d7a8; border-radius: 4px; font-size: 14px; color: #112611;
+        }
+        .config-area input { width: 300px; margin-left: 8px; }
+        .sub-container { background: #fff; padding: 15px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        .log-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 10px 0;
+        }
+        .log-field {
+            background: #f8fafc; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 14px;
+        }
+        .log-field input { width: 60px; text-align: center; }
+        .log-field input.custom-trade-name { width: 85px; text-align: left; background: #fff; border: 1px solid #cbd5e0; border-radius: 4px; padding: 2px 4px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-banner">
+        <div class="header-row-1">
+            <div class="header-logo-area">
+                <img src="https://lh3.googleusercontent.com/d/1IwoAL8I7c54k6HiAMc7K4OHVYrn-iR9V" alt="翔奕營造 Logo">
+            </div>
+            <div class="header-row-1-title">出工人數統計</div>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="header-row-2-title" id="main-title">工程名稱</div>
+    </div>
+
+    <div class="cloud-sync-bar">
+        <div>
+            ☁️ <strong>雲端狀態：</strong> <span id="sync-status" style="color: #1b381b;">就緒（每次修改後請點擊儲存）</span>
+        </div>
+        <div>
+            <button class="btn btn-green" onclick="saveToCloud()">☁️ 儲存資料至雲端</button>
+            <button class="btn btn-yellow" onclick="loadFromCloud()">🔄 從雲端重新載入</button>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <div class="control-group">
+            <label><strong>檢視年：</strong></label>
+            <select id="year-select" onchange="switchYear(this.value)"></select>
+            <button class="btn btn-sm" style="background:#c53030 !important; color:#fff;" onclick="deleteCurrentYear()">🗑️ 刪除年</button>
+            
+            <label style="margin-left: 8px;"><strong>月：</strong></label>
+            <select id="month-select" onchange="switchMonth(this.value)"></select>
+
+            <span style="margin-left: 8px;">新增：</span>
+            <input type="text" id="new-year-input" placeholder="年 (例: 116年)" style="width: 80px;">
+            <input type="text" id="new-month-input" placeholder="月 (例: 10月)" style="width: 75px;">
+            <button class="btn btn-red" onclick="addNewMonth()">＋ 新增年月</button>
+        </div>
+        <div class="control-group">
+            <input type="text" id="new-site-name" placeholder="請輸入新案場名稱" style="width: 170px;">
+            <button class="btn btn-red" onclick="addNewSite()">＋ 新增案場</button>
+        </div>
+    </div>
+
+    <div class="tabs" id="site-tabs"></div>
+
+    <div id="dynamic-content-area"></div>
+
+    <div id="report-content-pane" style="display: none;">
+        <div class="sub-container">
+            <h2 style="color: #3182ce; margin-top:0;">📋 當日回報文字預覽</h2>
+            <div style="margin: 15px 0; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    選擇日期：
+                    <select id="report-date-select" onchange="generateReport()" style="padding: 6px; font-size: 14px;"></select>
+                </div>
+                <div>
+                    <strong>自動偵測出工案場：</strong>
+                    <span id="detected-sites-tag" style="color: #38a169; font-weight: bold; margin-left: 5px;"></span>
+                </div>
+            </div>
+            <div class="report-section">
+                <h3>當日回報文字預覽</h3>
+                <div class="report-box" id="report-output">載入中...</div>
+                <button class="btn btn-green" style="font-size: 15px; padding: 8px 16px;" onclick="copyReport()">一鍵複製回報內容</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="log-content-pane" style="display: none;">
+        <div class="sub-container">
+            <h2 style="color: #d69e2e; margin-top:0;">📝 每日詳細施工日誌填報</h2>
+            <div style="margin-bottom: 15px;">
+                <label><strong>選擇填報日期：</strong></label>
+                <select id="log-date-select" onchange="renderLogForm()" style="padding: 6px; font-size: 14px; width: 150px;"></select>
+            </div>
+            <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 15px; margin-bottom: 15px; align-items: start;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px;"><strong>工程名稱：</strong></label>
+                    <select id="log-project-select" onchange="onLogProjectChange()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;"></select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px;"><strong>禮拜：</strong></label>
+                    <input type="text" id="log-weekday" readonly style="width: 100%; padding: 8px; font-size: 14px; height: 38px; background-color: #e2e8f0; text-align: center; font-weight: bold; box-sizing: border-box;">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; margin-bottom: 15px; align-items: start;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px;"><strong>上午天氣：</strong></label>
+                    <select id="log-weather-am" onchange="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
+                        <option value="晴">晴</option><option value="雨">雨</option><option value="陰">陰</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px;"><strong>下午天氣：</strong></label>
+                    <select id="log-weather-pm" onchange="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
+                        <option value="晴">晴</option><option value="雨">雨</option><option value="陰">陰</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px;"><strong>出工人員：</strong></label>
+                    <input type="text" id="log-workers-summary" oninput="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px; background-color: #fff; border: 1px solid #cbd5e0; box-sizing: border-box;" placeholder="自動帶入，可修改">
+                </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px;"><strong>今日施工進度⬇️：</strong></label>
+                <textarea id="log-progress" rows="3" onblur="formatProgressOnBlur(this)" oninput="saveLogData()" style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;" placeholder="可自由換行打字，移開游標或複製時自動加上藍色數字編號"></textarea>
+            </div>
+            <h3>📊 各工種出工人數細目：</h3>
+            <div class="log-grid" id="log-trades-grid"></div>
+            <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <div><label><strong>施工取樣試驗紀錄：</strong></label><textarea id="log-sampling" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>通知協力廠商辦理事項：</strong></label><textarea id="log-notice" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>重要事項紀錄：</strong></label><textarea id="log-important" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+            </div>
+            <div class="report-section" style="margin-top: 15px;">
+                <h3>📋 完整日誌文字預覽</h3>
+                <div class="report-box" id="log-text-output">載入中...</div>
+                <button class="btn btn-green" style="font-size: 15px; padding: 8px 16px;" onclick="copyLogReport()">一鍵複製詳細日誌</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="export-content-pane" style="display: none;">
+        <div class="sub-container">
+            <h2 style="color: #805ad5; margin-top:0;">📊 全案場 Excel 總表匯出與總覽</h2>
+            <div style="margin: 15px 0; display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn btn-red" style="font-size: 15px; padding: 8px 16px;" onclick="exportToExcel()">📥 匯出全部案場當月總表</button>
+                <button class="btn btn-blue" style="font-size: 15px; padding: 8px 16px;" onclick="exportYearlyToExcel()">📈 匯出全部案場當年度總表（含總施作天數）</button>
+            </div>
+            <div id="export-preview-table" class="table-responsive"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 圖片檢視燈箱 Modal -->
+<div id="image-modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.85); align-items:center; justify-content:center; flex-direction:column; gap:10px;" onclick="closeImageModal()">
+    <span onclick="closeImageModal()" style="position:absolute; top:20px; right:30px; color:#fff; font-size:36px; font-weight:bold; cursor:pointer;">&times;</span>
+    <img id="modal-img" style="max-width:90%; max-height:80%; border-radius:6px; box-shadow:0 0 20px rgba(255,255,255,0.2);">
+    <div id="modal-caption" style="color: #fff; font-size: 15px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 4px; max-width: 90%; text-align: center;"></div>
+</div>
+
+<script>
+    // 已更新為最新的 Google Apps Script Web App URL
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzz7k4b31JPPUeth8sAmpq7JhR60y9WJrSmsziky3c8yyEEMtrAxxLzYy4ddQs_WMTw/exec";
+
+    const defaultWorkers = ["盧明君", "林智宇", "吳炫德", "邱龍展"];
+    const tradeList = ["植筋工", "鋼筋工", "模板工", "泥水工", "機械操作工", "體力工", "建築細木工", "水電工", "混凝土澆置工", "路面鋪設工", "砌石工", "油漆工", "鐵工", "鷹架工", "吊車", "防水工"];
+
+    function getInitialDB() {
+        let db = {};
+        let months = ['115年9月', '115年10月'];
+        months.forEach(m => {
+            db[m] = { 
+                sites: [
+                    { id: 'qigu', name: '七股', title: '七股區圖書館耐震補強工程' },
+                    { id: 'beiliao', name: '北寮里活動中心', title: '南化區北寮里活動中心耐震補強工程' },
+                    { id: 'annan', name: '安南-溪頂', title: '安南區溪頂寮工程' },
+                    { id: 'company', name: '公司', title: '公司內部行政作業' },
+                    { id: 'warranty_pool', name: '保固中案場', title: '保固中各維修案場管理', isWarrantyRoot: true, fixed: true }
+                ], 
+                data: {}, 
+                logs: {}, 
+                meta: {}, 
+                customSiteNames: {},
+                warrantySubSites: {
+                    'warranty_pool': [
+                        { id: 'sub_1', name: '某某學校維修案', date: '2026-09-09', workers: '盧明君', project: '保固修繕漏水', note: '已完成' }
+                    ]
+                } 
+            };
+            db[m].sites.forEach(site => {
+                if (site.isWarrantyRoot) return;
+                let daysCount = m.includes('9月') ? 30 : 31;
+                let dayList = [];
+                let siteLogs = {};
+                for (let i = 1; i <= daysCount; i++) {
+                    dayList.push({ 
+                        dayIndex: i, 
+                        dateStr: `${i}日`, 
+                        amWorkers: [], 
+                        amProject: '', 
+                        amTime: '', 
+                        amPhotoName: '', 
+                        amPhoto: '', 
+                        pmWorkers: [], 
+                        pmProject: '', 
+                        pmTime: '', 
+                        pmPhotoName: '', 
+                        pmPhoto: '', 
+                        note: '' 
+                    });
+                    siteLogs[i] = { 
+                        selectedSiteId: site.id, 
+                        weatherAm: "晴", 
+                        weatherPm: "晴", 
+                        workersSummary: "", 
+                        progress: "", 
+                        trades: {}, 
+                        customTrades: [
+                            { name: "自訂工1", val: "" },
+                            { name: "自訂工2", val: "" },
+                            { name: "自訂工3", val: "" }
+                        ], 
+                        sampling: "", 
+                        notice: "", 
+                        important: "" 
+                    };
+                }
+                db[m].data[site.id] = { workers: [...defaultWorkers], days: dayList };
+                db[m].logs[site.id] = siteLogs;
+                db[m].meta[site.id] = { startDate: '', duration: 0, durationType: '日曆天', extension: 0, suspensionDate: '', resumptionDate: '' };
+                db[m].customSiteNames[site.id] = site.title; 
+            });
+        });
+        return db;
+    }
+
+    let appData = JSON.parse(localStorage.getItem('construction_master_db_cloud')) || getInitialDB();
+
+    Object.keys(appData).forEach(m => {
+        if (!appData[m].sites) appData[m].sites = [];
+        if (!appData[m].sites.some(s => s.id === 'warranty_pool')) {
+            appData[m].sites.push({ id: 'warranty_pool', name: '保固中案場', title: '保固中各維修案場管理', isWarrantyRoot: true, fixed: true });
+        }
+        if (!appData[m].customSiteNames) appData[m].customSiteNames = {};
+        appData[m].sites.forEach(s => {
+            if (!s.isWarrantyRoot && !appData[m].customSiteNames[s.id]) {
+                appData[m].customSiteNames[s.id] = s.title;
+            }
+        });
+        if (!appData[m].logs) appData[m].logs = {};
+        Object.keys(appData[m].logs).forEach(sId => {
+            let sLogs = appData[m].logs[sId];
+            if (sLogs) {
+                Object.keys(sLogs).forEach(dIdx => {
+                    if (!sLogs[dIdx].customTrades) {
+                        sLogs[dIdx].customTrades = [
+                            { name: "自訂工1", val: "" },
+                            { name: "自訂工2", val: "" },
+                            { name: "自訂工3", val: "" }
+                        ];
+                    }
+                });
+            }
+        });
+        if (!appData[m].warrantySubSites) appData[m].warrantySubSites = {};
+        if (!appData[m].warrantySubSites['warranty_pool']) {
+            appData[m].warrantySubSites['warranty_pool'] = [];
+        }
+    });
+
+    let currentMonth = Object.keys(appData)[0] || '115年9月';
+    let currentSiteId = appData[currentMonth].sites[0].id;
+
+    function saveDB() {
+        try {
+            localStorage.setItem('construction_master_db_cloud', JSON.stringify(appData));
+        } catch (e) {
+            console.error("LocalStorage 容量已滿", e);
+        }
+    }
+
+    async function saveToCloud() {
+        document.getElementById('sync-status').innerText = "正在儲存至雲端...";
+        try {
+            await fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(appData)
+            });
+            document.getElementById('sync-status').innerText = "已成功同步至雲端！";
+            alert('資料已成功儲存至 Google 試算表！');
+        } catch (err) {
+            alert('儲存失敗：' + err);
+        }
+    }
+
+    async function loadFromCloud() {
+        document.getElementById('sync-status').innerText = "正在從雲端載入...";
+        try {
+            let res = await fetch(APPS_SCRIPT_URL);
+            let json = await res.json();
+            if (json && json.data && Object.keys(json.data).length > 0) {
+                appData = json.data;
+                Object.keys(appData).forEach(m => {
+                    if (!appData[m].sites) appData[m].sites = [];
+                    if (!appData[m].sites.some(s => s.id === 'warranty_pool')) {
+                        appData[m].sites.push({ id: 'warranty_pool', name: '保固中案場', title: '保固中各維修案場管理', isWarrantyRoot: true, fixed: true });
+                    }
+                    if (!appData[m].customSiteNames) appData[m].customSiteNames = {};
+                    appData[m].sites.forEach(s => {
+                        if (!s.isWarrantyRoot && !appData[m].customSiteNames[s.id]) {
+                            appData[m].customSiteNames[s.id] = s.title;
+                        }
+                    });
+                    if (!appData[m].logs) appData[m].logs = {};
+                    Object.keys(appData[m].logs).forEach(sId => {
+                        let sLogs = appData[m].logs[sId];
+                        if (sLogs) {
+                            Object.keys(sLogs).forEach(dIdx => {
+                                if (!sLogs[dIdx].customTrades) {
+                                    sLogs[dIdx].customTrades = [
+                                        { name: "自訂工1", val: "" },
+                                        { name: "自訂工2", val: "" },
+                                        { name: "自訂工3", val: "" }
+                                    ];
+                                }
+                            });
+                        }
+                    });
+                    if (!appData[m].warrantySubSites) appData[m].warrantySubSites = {};
+                    if (!appData[m].warrantySubSites['warranty_pool']) {
+                        appData[m].warrantySubSites['warranty_pool'] = [];
+                    }
+                });
+                saveDB();
+                initUI();
+                document.getElementById('sync-status').innerText = "已從雲端載入最新資料！";
+                alert('已成功從雲端同步最新資料！');
+            } else {
+                alert('雲端目前尚無資料');
+            }
+        } catch (err) {
+            alert('載入失敗：' + err);
+        }
+    }
+
+    function getWeekdayString(monthStr, dayIndex) {
+        let yearMatch = monthStr.match(/(\d+)年/);
+        let monthMatch = monthStr.match(/(\d+)月/);
+        if (!yearMatch || !monthMatch) return "禮拜一";
+        let westernYear = parseInt(yearMatch[1]) + 1911;
+        let month = parseInt(monthMatch[1]) - 1;
+        let dateObj = new Date(westernYear, month, dayIndex);
+        return ["禮拜日", "禮拜一", "禮拜二", "禮拜三", "禮拜四", "禮拜五", "禮拜六"][dateObj.getDay()];
+    }
+
+    function parseYearAndMonth(monthKey) {
+        let yMatch = monthKey.match(/^(\d+年)/);
+        let mMatch = monthKey.match(/(\d+月)$/);
+        let y = yMatch ? yMatch[1] : '115年';
+        let mo = mMatch ? mMatch[1] : '9月';
+        return { year: y, month: mo };
+    }
+
+    function initMonthSelect() {
+        const yearSelect = document.getElementById('year-select');
+        const monthSelect = document.getElementById('month-select');
+        
+        let years = Array.from(new Set(Object.keys(appData).map(k => parseYearAndMonth(k).year)));
+        years.sort();
+        
+        let curInfo = parseYearAndMonth(currentMonth);
+
+        yearSelect.innerHTML = '';
+        years.forEach(y => {
+            let opt = document.createElement('option');
+            opt.value = y; opt.innerText = y;
+            if (y === curInfo.year) opt.selected = true;
+            yearSelect.appendChild(opt);
+        });
+
+        let monthsInYear = Object.keys(appData).filter(k => k.startsWith(curInfo.year)).map(k => parseYearAndMonth(k).month);
+        monthsInYear.sort((a,b) => parseInt(a) - parseInt(b));
+
+        monthSelect.innerHTML = '';
+        monthsInYear.forEach(mo => {
+            let opt = document.createElement('option');
+            opt.value = mo; opt.innerText = mo;
+            let fullKey = curInfo.year + mo;
+            if (fullKey === currentMonth) opt.selected = true;
+            monthSelect.appendChild(opt);
+        });
+    }
+
+    function switchYear(year) {
+        let monthsInYear = Object.keys(appData).filter(k => k.startsWith(year));
+        if (monthsInYear.length > 0) {
+            switchMonth(monthsInYear[0]);
+        }
+    }
+
+    function switchMonth(month) {
+        let curInfo = parseYearAndMonth(currentMonth);
+        let targetKey = curInfo.year + (month.includes('月') ? month : (month + '月'));
+        if (appData[targetKey]) {
+            currentMonth = targetKey;
+            let monthSites = appData[currentMonth].sites;
+            if (!['report_tab', 'log_tab', 'export_tab'].includes(currentSiteId) && !monthSites.some(s => s.id === currentSiteId)) {
+                currentSiteId = monthSites[0].id;
+            }
+            initUI();
+        }
+    }
+
+    function deleteCurrentYear() {
+        let curInfo = parseYearAndMonth(currentMonth);
+        let keysInYear = Object.keys(appData).filter(k => k.startsWith(curInfo.year));
+        let totalKeys = Object.keys(appData).length;
+
+        if (totalKeys - keysInYear.length <= 0) {
+            alert('至少需要保留一個年份的資料，無法全部刪除！');
+            return;
+        }
+
+        if (!confirm(`確定要刪除「${curInfo.year}」底下所有月份的資料嗎？`)) return;
+
+        keysInYear.forEach(k => delete appData[k]);
+        currentMonth = Object.keys(appData)[0];
+        let monthSites = appData[currentMonth].sites;
+        currentSiteId = monthSites[0].id;
+        saveDB();
+        initMonthSelect();
+        initUI();
+        alert('已成功刪除該年份！');
+    }
+
+    function addNewMonth() {
+        let yInput = document.getElementById('new-year-input').value.trim();
+        let mInput = document.getElementById('new-month-input').value.trim();
+        let curInfo = parseYearAndMonth(currentMonth);
+        
+        let y = yInput ? (yInput.includes('年') ? yInput : yInput + '年') : curInfo.year;
+        let mo = mInput ? (mInput.includes('月') ? mInput : mInput + '月') : '';
+        
+        if (!mo) { alert('請至少輸入要新增的月份（例：10月）'); return; }
+        let val = y + mo;
+
+        if (appData[val]) { alert('此年月已存在！'); return; }
+        
+        let newSites = [
+            { id: 'qigu', name: '七股', title: '七股區圖書館耐震補強工程' },
+            { id: 'beiliao', name: '北寮里活動中心', title: '南化區北寮里活動中心耐震補強工程' },
+            { id: 'annan', name: '安南-溪頂', title: '安南區溪頂寮工程' },
+            { id: 'company', name: '公司', title: '公司內部行政作業' },
+            { id: 'warranty_pool', name: '保固中案場', title: '保固中各維修案場管理', isWarrantyRoot: true, fixed: true }
+        ];
+
+        appData[val] = { sites: newSites, data: {}, logs: {}, meta: {}, customSiteNames: {}, warrantySubSites: { 'warranty_pool': [] } };
+        newSites.forEach(site => {
+            if (site.isWarrantyRoot) return;
+            let dayList = []; let siteLogs = {};
+            for (let i = 1; i <= 30; i++) {
+                dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amProject: '', amTime: '', amPhotoName: '', amPhoto: '', pmWorkers: [], pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', note: '' });
+                siteLogs[i] = { 
+                    selectedSiteId: site.id, 
+                    weatherAm: '晴', 
+                    weatherPm: '晴', 
+                    progress: '', 
+                    trades: {}, 
+                    customTrades: [
+                        { name: "自訂工1", val: "" },
+                        { name: "自訂工2", val: "" },
+                        { name: "自訂工3", val: "" }
+                    ], 
+                    sampling: '', 
+                    notice: '', 
+                    important: '' 
+                };
+            }
+            appData[val].data[site.id] = { workers: [...defaultWorkers], days: dayList };
+            appData[val].logs[site.id] = siteLogs;
+            appData[val].meta[site.id] = { startDate: '', duration: 0, durationType: '日曆天', extension: 0, suspensionDate: '', resumptionDate: '' };
+            appData[val].customSiteNames[site.id] = site.title;
+        });
+        saveDB(); currentMonth = val;
+        document.getElementById('new-year-input').value = '';
+        document.getElementById('new-month-input').value = '';
+        initMonthSelect(); initUI();
+    }
+
+    function addNewSite() {
+        let name = document.getElementById('new-site-name').value.trim();
+        if (!name) { alert('請輸入案場名稱'); return; }
+        let siteId = 'site_' + Date.now();
+        let monthSites = appData[currentMonth].sites;
+        if (monthSites.some(s => s.name === name)) { alert('名稱已存在！'); return; }
+        
+        let newSiteObj = { id: siteId, name: name, title: name };
+        let warrantyIdx = monthSites.findIndex(s => s.isWarrantyRoot);
+        if (warrantyIdx !== -1) {
+            monthSites.splice(warrantyIdx, 0, newSiteObj);
+        } else {
+            monthSites.push(newSiteObj);
+        }
+
+        let dayList = []; let siteLogs = {};
+        for (let i = 1; i <= 30; i++) {
+            dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amProject: '', amTime: '', amPhotoName: '', amPhoto: '', pmWorkers: [], pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', note: '' });
+            siteLogs[i] = { 
+                selectedSiteId: siteId, 
+                weatherAm: '晴', 
+                weatherPm: '晴', 
+                progress: '', 
+                trades: {}, 
+                customTrades: [
+                    { name: "自訂工1", val: "" },
+                    { name: "自訂工2", val: "" },
+                    { name: "自訂工3", val: "" }
+                ], 
+                sampling: '', 
+                notice: '', 
+                important: '' 
+            };
+        }
+        appData[currentMonth].data[siteId] = { workers: [...defaultWorkers], days: dayList };
+        appData[currentMonth].logs[siteId] = siteLogs;
+        if (!appData[currentMonth].meta) appData[currentMonth].meta = {};
+        appData[currentMonth].meta[siteId] = { startDate: '', duration: 0, durationType: '日曆天', extension: 0, suspensionDate: '', resumptionDate: '' };
+        if (!appData[currentMonth].customSiteNames) appData[currentMonth].customSiteNames = {};
+        appData[currentMonth].customSiteNames[siteId] = name;
+        saveDB(); currentSiteId = siteId;
+        document.getElementById('new-site-name').value = '';
+        initUI();
+    }
+
+    function deleteSite(siteId, event) {
+        event.stopPropagation();
+        let siteObj = appData[currentMonth].sites.find(s => s.id === siteId);
+        if (siteObj && siteObj.fixed) {
+            alert('此為固定案場，無法刪除！');
+            return;
+        }
+        if (!confirm('確定刪除此案場？')) return;
+        let monthSites = appData[currentMonth].sites;
+        if (monthSites.length <= 1) { alert('至少保留一個案場！'); return; }
+        appData[currentMonth].sites = monthSites.filter(s => s.id !== siteId);
+        delete appData[currentMonth].data[siteId];
+        delete appData[currentMonth].logs[siteId];
+        if (appData[currentMonth].meta) delete appData[currentMonth].meta[siteId];
+        if (appData[currentMonth].customSiteNames) delete appData[currentMonth].customSiteNames[siteId];
+        if (appData[currentMonth].warrantySubSites && appData[currentMonth].warrantySubSites[siteId]) {
+            delete appData[currentMonth].warrantySubSites[siteId];
+        }
+        saveDB(); currentSiteId = appData[currentMonth].sites[0].id;
+        initUI();
+    }
+
+    function editSiteName(siteId, event) {
+        event.stopPropagation();
+        let site = appData[currentMonth].sites.find(s => s.id === siteId);
+        if (!site) return;
+        if (site.fixed) {
+            alert('此為固定案場，名稱無法修改！');
+            return;
+        }
+        let newName = prompt("請輸入新的分頁按鈕名稱：", site.name);
+        if (!newName || !newName.trim()) return;
+        let clean = newName.trim();
+        site.name = clean;
+        saveDB(); initUI();
+    }
+
+    function updateCustomSiteName(val) {
+        if (!appData[currentMonth].customSiteNames) appData[currentMonth].customSiteNames = {};
+        appData[currentMonth].customSiteNames[currentSiteId] = val;
+        saveDB();
+    }
+
+    function initUI() {
+        initMonthSelect(); initTabs();
+        const reportPane = document.getElementById('report-content-pane');
+        const logPane = document.getElementById('log-content-pane');
+        const exportPane = document.getElementById('export-content-pane');
+        const dynamicArea = document.getElementById('dynamic-content-area');
+        
+        reportPane.style.display = 'none'; 
+        logPane.style.display = 'none'; 
+        exportPane.style.display = 'none'; 
+        dynamicArea.style.display = 'none';
+
+        const mainTitle = document.getElementById('main-title');
+        let monthSites = appData[currentMonth].sites;
+
+        if (currentSiteId === 'report_tab') {
+            reportPane.style.display = 'block';
+            mainTitle.innerText = `📋 每日回報總覽`;
+            initReportPane();
+        } else if (currentSiteId === 'log_tab') {
+            logPane.style.display = 'block';
+            mainTitle.innerText = "📝 每日詳細施工日誌填報";
+            initLogPane();
+        } else if (currentSiteId === 'export_tab') {
+            exportPane.style.display = 'block';
+            mainTitle.innerText = "📊 全案場 Excel 總表匯出";
+            renderExportPreview();
+        } else {
+            dynamicArea.style.display = 'block';
+            let currentSite = monthSites.find(s => s.id === currentSiteId) || monthSites[0];
+            currentSiteId = currentSite.id;
+            mainTitle.innerText = currentSite.title;
+            renderDynamicPane(currentSite);
+        }
+    }
+
+    function initTabs() {
+        const tabsContainer = document.getElementById('site-tabs');
+        tabsContainer.innerHTML = '';
+        let monthSites = appData[currentMonth].sites;
+
+        monthSites.forEach(site => {
+            const btn = document.createElement('button');
+            if (site.isWarrantyRoot) {
+                btn.className = `tab-btn warranty-tab ${site.id === currentSiteId ? 'active' : ''}`;
+            } else {
+                btn.className = `tab-btn ${site.id === currentSiteId ? 'active' : ''}`;
+            }
+            let spanName = document.createElement('span');
+            spanName.innerText = site.name;
+            spanName.onclick = () => { currentSiteId = site.id; initUI(); };
+            btn.appendChild(spanName);
+
+            if (!site.fixed) {
+                let editBtn = document.createElement('span');
+                editBtn.className = 'edit-site'; editBtn.innerHTML = '✎';
+                editBtn.onclick = (e) => editSiteName(site.id, e);
+                btn.appendChild(editBtn);
+            }
+
+            if (monthSites.length > 1 && !site.fixed) {
+                let closeBtn = document.createElement('span');
+                closeBtn.className = 'close-site'; closeBtn.innerHTML = '&times;';
+                closeBtn.onclick = (e) => deleteSite(site.id, e);
+                btn.appendChild(closeBtn);
+            }
+            tabsContainer.appendChild(btn);
+        });
+
+        const reportBtn = document.createElement('button');
+        reportBtn.className = `tab-btn report-tab ${currentSiteId === 'report_tab' ? 'active' : ''}`;
+        reportBtn.innerText = '📋 每日回報';
+        reportBtn.onclick = () => { currentSiteId = 'report_tab'; initUI(); };
+        tabsContainer.appendChild(reportBtn);
+
+        const logBtn = document.createElement('button');
+        logBtn.className = `tab-btn log-tab ${currentSiteId === 'log_tab' ? 'active' : ''}`;
+        logBtn.innerText = '📝 施工日誌填報';
+        logBtn.onclick = () => { currentSiteId = 'log_tab'; initUI(); };
+        tabsContainer.appendChild(logBtn);
+
+        const exportBtn = document.createElement('button');
+        exportBtn.className = `tab-btn export-tab ${currentSiteId === 'export_tab' ? 'active' : ''}`;
+        exportBtn.innerText = '📊 總表匯出';
+        exportBtn.onclick = () => { currentSiteId = 'export_tab'; initUI(); };
+        tabsContainer.appendChild(exportBtn);
+    }
+
+    function renderDynamicPane(siteObj) {
+        const area = document.getElementById('dynamic-content-area');
+        
+        if (siteObj && siteObj.isWarrantyRoot) {
+            if (!appData[currentMonth].warrantySubSites) appData[currentMonth].warrantySubSites = {};
+            if (!appData[currentMonth].warrantySubSites[currentSiteId]) {
+                appData[currentMonth].warrantySubSites[currentSiteId] = [];
+            }
+            let subList = appData[currentMonth].warrantySubSites[currentSiteId];
+
+            let html = `
+                <div style="font-size: 15px; font-weight: bold; color: #1e331e; margin-bottom: 12px; background: #b6d7a8; padding: 10px 15px; border-radius: 6px; border: 1px solid #93c47d; display: flex; align-items: center; gap: 10px;">
+                    <label><strong>案場名稱：</strong></label>
+                    <input type="text" value="${siteObj.name}" readonly style="padding: 6px 10px; font-size: 14px; border: 1px solid #93c47d; border-radius: 4px; width: 350px; background: #fff;">
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                    <button class="btn btn-red" onclick="addWarrantySubRow()">＋ 新增</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="warranty-table">
+                        <thead>
+                            <tr>
+                                <th style="width:60px;">項次</th>
+                                <th style="width:140px;">日期</th>
+                                <th style="width:220px;">維修案場名稱</th>
+                                <th style="width:180px;">出工人員</th>
+                                <th>維修/施工項目</th>
+                                <th style="width:150px;">備註</th>
+                                <th style="width:80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="warranty-tbody">
+            `;
+
+            if (subList.length === 0) {
+                html += `<tr id="warranty-empty-row"><td colspan="7" style="color:#718096; padding:25px;">目前尚無紀錄，請點擊右上角「＋ 新增」開始填寫！</td></tr>`;
+            } else {
+                subList.forEach((item, idx) => {
+                    html += `
+                        <tr>
+                            <td style="color: #1a202c; font-weight: bold;" class="warranty-index">${idx + 1}</td>
+                            <td><input type="date" value="${item.date || ''}" onchange="updateWarrantySub(${idx}, 'date', this.value)" style="padding:4px; width:95%;"></td>
+                            <td><input type="text" value="${item.name || ''}" oninput="updateWarrantySub(${idx}, 'name', this.value)" placeholder="例: 某國小保固修繕" style="width:95%; padding:4px;"></td>
+                            <td><input type="text" value="${item.workers || ''}" oninput="updateWarrantySub(${idx}, 'workers', this.value)" placeholder="例: 盧明君" style="width:95%; padding:4px;"></td>
+                            <td><textarea class="resizable-box" style="min-height:35px;" oninput="updateWarrantySub(${idx}, 'project', this.value)">${item.project || ''}</textarea></td>
+                            <td><input type="text" value="${item.note || ''}" oninput="updateWarrantySub(${idx}, 'note', this.value)" placeholder="備註" style="width:95%; padding:4px;"></td>
+                            <td><button class="btn btn-sm" style="background:#e53e3e; color: #fff;" onclick="deleteWarrantySub(${idx})">刪除</button></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            html += `</tbody></table></div>`;
+            area.innerHTML = html;
+            return;
+        }
+
+        let siteData = appData[currentMonth].data[currentSiteId];
+        if (!appData[currentMonth].meta) appData[currentMonth].meta = {};
+        if (!appData[currentMonth].meta[currentSiteId]) {
+            appData[currentMonth].meta[currentSiteId] = { startDate: '', duration: 0, durationType: '日曆天', extension: 0, suspensionDate: '', resumptionDate: '' };
+        }
+        let meta = appData[currentMonth].meta[currentSiteId];
+        
+        if (!appData[currentMonth].customSiteNames) appData[currentMonth].customSiteNames = {};
+        let currentCustomName = appData[currentMonth].customSiteNames[currentSiteId] !== undefined ? appData[currentMonth].customSiteNames[currentSiteId] : siteObj.title;
+
+        let html = `
+            <div style="font-size: 15px; font-weight: bold; color: #1e331e; margin-bottom: 12px; background: #b6d7a8; padding: 10px 15px; border-radius: 6px; border: 1px solid #93c47d; display: flex; align-items: center; gap: 10px;">
+                <label><strong>案場名稱：</strong></label>
+                <input type="text" value="${currentCustomName}" oninput="updateCustomSiteName(this.value)" style="padding: 6px 10px; font-size: 14px; border: 1px solid #93c47d; border-radius: 4px; width: 350px; background: #fff;">
+            </div>
+
+            <div class="project-meta-panel">
+                <div class="meta-item">
+                    <label><strong>開工日期：</strong></label>
+                    <input type="date" id="meta-start-date" value="${meta.startDate || ''}" onchange="updateProjectMeta()">
+                </div>
+                <div class="meta-item">
+                    <label><strong>完工工期：</strong></label>
+                    <span id="meta-end-date" style="font-weight: bold; color: #1e331e; background: #fff; padding: 4px 8px; border: 1px solid #93c47d; border-radius: 4px; display: inline-block; min-width: 100px;">自動計算</span>
+                </div>
+                <div class="meta-item">
+                    <label><strong>工期：</strong></label>
+                    <input type="number" id="meta-duration" min="1" value="${meta.duration || 0}" style="width: 65px;" oninput="updateProjectMeta()">
+                    <select id="meta-duration-type" onchange="updateProjectMeta()">
+                        <option value="日曆天" ${meta.durationType === '日曆天' ? 'selected' : ''}>日曆天</option>
+                        <option value="工作天" ${meta.durationType === '工作天' ? 'selected' : ''}>工作天</option>
+                    </select>
+                </div>
+                <div class="meta-item">
+                    <label><strong>展延/不計工期：</strong></label>
+                    <input type="number" id="meta-extension" min="0" value="${meta.extension || 0}" placeholder="例: 2" style="width: 75px;" oninput="updateProjectMeta()">
+                </div>
+                <div class="meta-item">
+                    <label><strong>停工日期：</strong></label>
+                    <input type="date" id="meta-suspension-date" value="${meta.suspensionDate || ''}" onchange="updateProjectMeta()">
+                </div>
+                <div class="meta-item">
+                    <label><strong>復工日期：</strong></label>
+                    <input type="date" id="meta-resumption-date" value="${meta.resumptionDate || ''}" onchange="updateProjectMeta()">
+                </div>
+                <div class="meta-item">
+                    <label><strong>停工天數：</strong></label>
+                    <span id="meta-suspension-days" style="font-weight: bold; color: #78350f; background: #fff; padding: 4px 8px; border: 1px solid #93c47d; border-radius: 4px; display: inline-block; min-width: 50px;">0 天</span>
+                </div>
+            </div>
+
+            <div class="config-area">
+                <label><strong>此工地可用工班/人員名單（用逗號分隔）：</strong></label>
+                <input type="text" id="worker-list-input" value="${siteData.workers.join(', ')}" placeholder="例如: 盧明君, 林智宇, 吳炫德, 邱龍展">
+                <button class="btn" style="background-color: #3182ce; color: white;" onclick="updateWorkerList()">更新名單</button>
+                <span style="color: #112611; font-size: 13px; margin-left: 15px;">💡 提示：填寫完畢請點擊上方「儲存資料至雲端」進行同步！</span>
+            </div>
+
+            <div class="table-responsive">
+                <table id="main-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">項次<div class="resizer" data-col="0"></div></th>
+                            <th style="width: 110px;">日期<div class="resizer" data-col="1"></div></th>
+                            <th style="width: 280px;">上午出工人員<div class="resizer" data-col="2"></div></th>
+                            <th style="width: 150px;">上午施工項目<div class="resizer" data-col="3"></div></th>
+                            <th style="width: 110px;">上午報班時間<div class="resizer" data-col="4"></div></th>
+                            <th style="width: 130px;">上午報班照片<div class="resizer" data-col="5"></div></th>
+                            <th style="width: 280px;">下午出工人員<div class="resizer" data-col="6"></div></th>
+                            <th style="width: 150px;">下午施工項目<div class="resizer" data-col="7"></div></th>
+                            <th style="width: 110px;">下午報班時間<div class="resizer" data-col="8"></div></th>
+                            <th style="width: 130px;">下午報班照片<div class="resizer" data-col="9"></div></th>
+                            <th style="width: 140px;">未出工人員<div class="resizer" data-col="10"></div></th>
+                            <th style="width: 110px;">備註<div class="resizer" data-col="11"></div></th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        `;
+        area.innerHTML = html;
+
+        calculateProjectMetaValues(meta);
+
+        const tbody = document.getElementById('table-body');
+        siteData.days.forEach((row, index) => {
+            let sortedWorkers = [...siteData.workers].sort((a, b) => {
+                let aCheckedAm = row.amWorkers.includes(a);
+                let bCheckedAm = row.amWorkers.includes(b);
+                let aCheckedPm = row.pmWorkers.includes(a);
+                let bCheckedPm = row.pmWorkers.includes(b);
+                let aScore = (aCheckedAm ? 2 : 0) + (aCheckedPm ? 2 : 0);
+                let bScore = (bCheckedAm ? 2 : 0) + (bCheckedPm ? 2 : 0);
+                return bScore - aScore;
+            });
+
+            let unworkedWorkers = siteData.workers.filter(w => !row.amWorkers.includes(w) && !row.pmWorkers.includes(w));
+            let tr = document.createElement('tr');
+            tr.innerHTML = getRowHTML(row, index, sortedWorkers, unworkedWorkers);
+            tbody.appendChild(tr);
+        });
+
+        initColumnResizer();
+    }
+
+    function getRowHTML(row, index, sortedWorkers, unworkedWorkers) {
+        return `
+            <td style="color: #1a202c; font-weight: bold;">${row.dayIndex}</td>
+            <td><strong style="white-space: nowrap;">${currentMonth}${row.dateStr}</strong></td>
+            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.amWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'am', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
+            <td><textarea class="resizable-box" oninput="updateField(${index}, 'amProject', this.value)">${row.amProject || ''}</textarea></td>
+            <td><input type="time" value="${row.amTime || ''}" onchange="updateField(${index}, 'amTime', this.value)" style="width: 80px; padding: 4px; font-size: 12px;"></td>
+            <td>
+                <input type="file" accept="image/*" onchange="updateRowPhoto(${index}, 'am', this)" style="font-size: 10px; width: 110px; margin-bottom: 2px;">
+                ${row.amPhoto ? `<div style="display:flex; align-items:center; justify-content:center; gap:4px;"><a href="javascript:void(0)" onclick="openImageModal('${row.amPhoto}', '上午工項: ${row.amProject || '無'}')" style="font-size: 11px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75px;">${row.amPhotoName}</a><button class="btn btn-sm" style="background:#e53e3e; color:#fff; padding:1px 4px; font-size:10px;" onclick="deleteRowPhoto(${index}, 'am')">❌</button></div>` : `<div style="font-size: 10px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 105px;">${row.amPhotoName || ''}</div>`}
+            </td>
+            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.pmWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'pm', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
+            <td><textarea class="resizable-box" oninput="updateField(${index}, 'pmProject', this.value)">${row.pmProject || ''}</textarea></td>
+            <td><input type="time" value="${row.pmTime || ''}" onchange="updateField(${index}, 'pmTime', this.value)" style="width: 80px; padding: 4px; font-size: 12px;"></td>
+            <td>
+                <input type="file" accept="image/*" onchange="updateRowPhoto(${index}, 'pm', this)" style="font-size: 10px; width: 110px; margin-bottom: 2px;">
+                ${row.pmPhoto ? `<div style="display:flex; align-items:center; justify-content:center; gap:4px;"><a href="javascript:void(0)" onclick="openImageModal('${row.pmPhoto}', '下午工項: ${row.pmProject || '無'}')" style="font-size: 11px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75px;">${row.pmPhotoName}</a><button class="btn btn-sm" style="background:#e53e3e; color:#fff; padding:1px 4px; font-size:10px;" onclick="deleteRowPhoto(${index}, 'pm')">❌</button></div>` : `<div style="font-size: 10px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 105px;">${row.pmPhotoName || ''}</div>`}
+            </td>
+            <td><div style="text-align: left; padding: 4px;"><span class="unworked-display">${unworkedWorkers.length > 0 ? unworkedWorkers.join('、') : '無'}</span></div></td>
+            <td><textarea class="resizable-box" style="min-height: 40px;" oninput="updateField(${index}, 'note', this.value)">${row.note || ''}</textarea></td>
+        `;
+    }
+
+    function openImageModal(dataUrl, captionText) {
+        let modal = document.getElementById('image-modal');
+        let img = document.getElementById('modal-img');
+        let caption = document.getElementById('modal-caption');
+        img.src = dataUrl;
+        caption.innerText = captionText;
+        modal.style.display = 'flex';
+    }
+
+    function closeImageModal() {
+        document.getElementById('image-modal').style.display = 'none';
+    }
+
+    function deleteRowPhoto(dayIndex, session) {
+        if (!confirm('確定要刪除這張照片嗎？')) return;
+        let siteData = appData[currentMonth].data[currentSiteId];
+        if (session === 'am') {
+            siteData.days[dayIndex].amPhoto = '';
+            siteData.days[dayIndex].amPhotoName = '';
+        } else {
+            siteData.days[dayIndex].pmPhoto = '';
+            siteData.days[dayIndex].pmPhotoName = '';
+        }
+        saveDB();
+        updateSingleRowUI(dayIndex);
+        alert('照片已刪除！');
+    }
+
+    function addWarrantySubRow() {
+        if (!appData[currentMonth].warrantySubSites) appData[currentMonth].warrantySubSites = {};
+        if (!appData[currentMonth].warrantySubSites[currentSiteId]) {
+            appData[currentMonth].warrantySubSites[currentSiteId] = [];
+        }
+        let globalWorkers = defaultWorkers;
+        let todayStr = new Date().toISOString().split('T')[0];
+
+        let newRecord = {
+            name: '',
+            date: todayStr,
+            project: '',
+            workers: globalWorkers.join('、'),
+            note: ''
+        };
+
+        appData[currentMonth].warrantySubSites[currentSiteId].push(newRecord);
+        saveDB();
+
+        let warrantySiteObj = appData[currentMonth].sites.find(s => s.id === currentSiteId);
+        renderDynamicPane(warrantySiteObj);
+    }
+
+    function updateWarrantySub(idx, field, val) {
+        if (!appData[currentMonth].warrantySubSites) return;
+        let list = appData[currentMonth].warrantySubSites[currentSiteId];
+        if (list && list[idx]) {
+            list[idx][field] = val;
+            saveDB();
+        }
+    }
+
+    function deleteWarrantySub(idx) {
+        if (!confirm('確定刪除此筆維修紀錄？')) return;
+        let list = appData[currentMonth].warrantySubSites[currentSiteId];
+        if (list) {
+            list.splice(idx, 1);
+            saveDB();
+            let warrantySiteObj = appData[currentMonth].sites.find(s => s.id === currentSiteId);
+            renderDynamicPane(warrantySiteObj);
+        }
+    }
+
+    function calculateProjectMetaValues(meta) {
+        let suspensionDays = 0;
+        if (meta.suspensionDate && meta.resumptionDate) {
+            let d1 = new Date(meta.suspensionDate);
+            let d2 = new Date(meta.resumptionDate);
+            let diffTime = d2 - d1;
+            let diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0) {
+                suspensionDays = diffDays;
+            }
+        }
+        let sDaysEl = document.getElementById('meta-suspension-days');
+        if (sDaysEl) sDaysEl.innerText = suspensionDays + " 天";
+
+        let endDEl = document.getElementById('meta-end-date');
+        if (endDEl) {
+            if (meta.startDate && meta.duration > 0) {
+                let startD = new Date(meta.startDate);
+                let extensionDays = parseInt(meta.extension) || 0;
+                let totalDaysToAdd = parseInt(meta.duration) + suspensionDays + extensionDays - 1;
+                startD.setDate(startD.getDate() + totalDaysToAdd);
+                let y = startD.getFullYear();
+                let m = String(startD.getMonth() + 1).padStart(2, '0');
+                let d = String(startD.getDate()).padStart(2, '0');
+                endDEl.innerText = `${y}-${m}-${d}`;
+            } else {
+                endDEl.innerText = "自動計算";
+            }
+        }
+    }
+
+    function updateProjectMeta() {
+        if (!appData[currentMonth].meta) appData[currentMonth].meta = {};
+        let meta = appData[currentMonth].meta[currentSiteId] || {};
+        meta.startDate = document.getElementById('meta-start-date').value;
+        meta.duration = parseInt(document.getElementById('meta-duration').value) || 0;
+        meta.durationType = document.getElementById('meta-duration-type').value;
+        meta.extension = parseInt(document.getElementById('meta-extension').value) || 0;
+        meta.suspensionDate = document.getElementById('meta-suspension-date').value;
+        meta.resumptionDate = document.getElementById('meta-resumption-date').value;
+        
+        appData[currentMonth].meta[currentSiteId] = meta;
+        calculateProjectMetaValues(meta);
+        saveDB();
+    }
+
+    // 支援手機上傳照片自動等比縮小與品質壓縮，避免中斷或塞爆空間
+    function compressImage(file, maxWidth, callback) {
+        let reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(event) {
+            let img = new Image();
+            img.src = event.target.result;
+            img.onload = function() {
+                let canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                let ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+                let compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+                callback(compressedDataUrl);
+            };
+        };
+    }
+
+    function updateRowPhoto(dayIndex, session, input) {
+        if (input.files && input.files[0]) {
+            let file = input.files[0];
+            compressImage(file, 850, function(compressedUrl) {
+                let siteData = appData[currentMonth].data[currentSiteId];
+                if (session === 'am') {
+                    siteData.days[dayIndex].amPhoto = compressedUrl;
+                    siteData.days[dayIndex].amPhotoName = file.name;
+                } else {
+                    siteData.days[dayIndex].pmPhoto = compressedUrl;
+                    siteData.days[dayIndex].pmPhotoName = file.name;
+                }
+                saveDB();
+                updateSingleRowUI(dayIndex);
+                alert(`${session === 'am' ? '上午' : '下午'}報班照片上傳成功！`);
+            });
+        }
+    }
+
+    function initColumnResizer() {
+        const table = document.getElementById('main-table');
+        if (!table) return;
+        table.querySelectorAll('th').forEach((th) => {
+            let resizer = th.querySelector('.resizer');
+            if (!resizer) return;
+            let startX = 0; let startWidth = 0;
+            resizer.onmousedown = function (e) {
+                startX = e.clientX;
+                startWidth = th.offsetWidth;
+                resizer.classList.add('resizing');
+                
+                document.onmousemove = function (e2) {
+                    let newWidth = startWidth + (e2.clientX - startX);
+                    if (newWidth > 40) {
+                        th.style.width = newWidth + 'px';
+                    }
+                };
+                document.onmouseup = function () {
+                    resizer.classList.remove('resizing');
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+                e.stopPropagation();
+            };
+        });
+    }
+
+    function updateWorker(dayIndex, type, workerName, isChecked) {
+        let siteData = appData[currentMonth].data[currentSiteId];
+        let dayData = siteData.days[dayIndex];
+        let targetList = type === 'am' ? dayData.amWorkers : dayData.pmWorkers;
+        if (isChecked) { if (!targetList.includes(workerName)) targetList.push(workerName); }
+        else { let idx = targetList.indexOf(workerName); if (idx > -1) targetList.splice(idx, 1); }
+        saveDB();
+        updateSingleRowUI(dayIndex);
+    }
+
+    function updateSingleRowUI(dayIndex) {
+        let siteData = appData[currentMonth].data[currentSiteId];
+        let row = siteData.days[dayIndex];
+        let tbody = document.getElementById('table-body');
+        if (!tbody || !tbody.rows[dayIndex]) {
+            initUI();
+            return;
+        }
+
+        let sortedWorkers = [...siteData.workers].sort((a, b) => {
+            let aCheckedAm = row.amWorkers.includes(a);
+            let bCheckedAm = row.amWorkers.includes(b);
+            let aCheckedPm = row.pmWorkers.includes(a);
+            let bCheckedPm = row.pmWorkers.includes(b);
+            let aScore = (aCheckedAm ? 2 : 0) + (aCheckedPm ? 2 : 0);
+            let bScore = (bCheckedAm ? 2 : 0) + (bCheckedPm ? 2 : 0);
+            return bScore - aScore;
+        });
+
+        let unworkedWorkers = siteData.workers.filter(w => !row.amWorkers.includes(w) && !row.pmWorkers.includes(w));
+        let tr = tbody.rows[dayIndex];
+        tr.innerHTML = getRowHTML(row, dayIndex, sortedWorkers, unworkedWorkers);
+    }
+
+    function updateField(dayIndex, fieldName, value) {
+        appData[currentMonth].data[currentSiteId].days[dayIndex][fieldName] = value;
+        saveDB();
+    }
+
+    function updateWorkerList() {
+        let inputVal = document.getElementById('worker-list-input').value;
+        appData[currentMonth].data[currentSiteId].workers = inputVal.split(',').map(w => w.trim()).filter(w => w !== '');
+        saveDB(); initUI(); alert('名單已更新！');
+    }
+
+    function initReportPane() {
+        const select = document.getElementById('report-date-select');
+        let firstActiveSite = appData[currentMonth].sites.find(s => !s.isWarrantyRoot) || appData[currentMonth].sites[0];
+        let siteData = appData[currentMonth].data[firstActiveSite.id];
+        select.innerHTML = '';
+        if (siteData && siteData.days) {
+            siteData.days.forEach((day, index) => {
+                let opt = document.createElement('option');
+                opt.value = index; opt.innerText = `${currentMonth}${day.dateStr}`;
+                select.appendChild(opt);
+            });
+        }
+
+        let todayDate = new Date();
+        let tYear = todayDate.getFullYear() - 1911;
+        let tMonth = todayDate.getMonth() + 1;
+        let tDay = todayDate.getDate();
+        let targetMonthStr = `${tYear}年${tMonth}月`;
+        let targetDayStr = `${tDay}日`;
+
+        if (targetMonthStr === currentMonth && siteData && siteData.days) {
+            let foundIndex = siteData.days.findIndex(d => d.dateStr === targetDayStr);
+            select.value = foundIndex !== -1 ? foundIndex : 0;
+        } else {
+            select.value = 0;
+        }
+
+        generateReport();
+    }
+
+    function generateReport() {
+        let selectIndex = document.getElementById('report-date-select').value;
+        if (selectIndex === undefined) return;
+        let monthSites = appData[currentMonth].sites;
+        let monthDataObj = appData[currentMonth].data;
+        let firstActiveSite = monthSites.find(s => !s.isWarrantyRoot);
+        if (!firstActiveSite || !monthDataObj[firstActiveSite.id]) return;
+        let dayData = monthDataObj[firstActiveSite.id].days[selectIndex];
+        let fullDateStr = `${currentMonth}${dayData.dateStr}`;
+
+        let activeSitesAm = [];
+        let activeSitesPm = [];
+
+        monthSites.forEach(site => {
+            if (site.isWarrantyRoot) return;
+            let sData = monthDataObj[site.id];
+            if (!sData) return;
+            let dData = sData.days[selectIndex];
+            
+            let hasAm = dData.amWorkers.length > 0 || (dData.amProject && dData.amProject.trim() !== '');
+            let hasPm = dData.pmWorkers.length > 0 || (dData.pmProject && dData.pmProject.trim() !== '');
+
+            if (hasAm) activeSitesAm.push({ site, dData });
+            if (hasPm) activeSitesPm.push({ site, dData });
+        });
+
+        let allActiveNames = Array.from(new Set([...activeSitesAm.map(i => i.site.name), ...activeSitesPm.map(i => i.site.name)]));
+        document.getElementById('detected-sites-tag').innerText = allActiveNames.length > 0 ? allActiveNames.join('、') : "（尚無紀錄）";
+
+        if (activeSitesAm.length === 0 && activeSitesPm.length === 0) {
+            document.getElementById('report-output').innerText = "當日無任何案場有出工紀錄。";
+            return;
+        }
+
+        let amR = [];
+        activeSitesAm.forEach(({ site, dData }) => {
+            let amStr = dData.amWorkers.length > 0 ? dData.amWorkers.join('、') : '無';
+            let sWorkers = appData[currentMonth].data[site.id].workers;
+            let unworked = sWorkers.filter(w => !dData.amWorkers.includes(w) && !dData.pmWorkers.includes(w)).join('、') || '無';
+            amR.push(
+`上午出工：共${dData.amWorkers.length}人（${amStr}），未出工：${unworked}
+案場：${site.name}
+項目：${dData.amProject || '無'} (時間: ${dData.amTime || '未填'})`
+            );
+        });
+
+        let pmR = [];
+        activeSitesPm.forEach(({ site, dData }) => {
+            let pmStr = dData.pmWorkers.length > 0 ? dData.pmWorkers.join('、') : '無';
+            let sWorkers = appData[currentMonth].data[site.id].workers;
+            let unworked = sWorkers.filter(w => !dData.amWorkers.includes(w) && !dData.pmWorkers.includes(w)).join('、') || '無';
+            pmR.push(
+`下午出工：共${dData.pmWorkers.length}人（${pmStr}），未出工：${unworked}
+案場：${site.name}
+項目：${dData.pmProject || '無'} (時間: ${dData.pmTime || '未填'})`
+            );
+        });
+
+        let reportText = "";
+        if (amR.length > 0) {
+            reportText += `${fullDateStr}，上午：\n----------------------------------------\n` + amR.join('\n\n');
+        }
+        if (pmR.length > 0) {
+            if (reportText !== "") reportText += "\n\n";
+            reportText += `${fullDateStr}，下午：\n----------------------------------------\n` + pmR.join('\n\n');
+        }
+
+        document.getElementById('report-output').innerText = reportText;
+    }
+
+    function copyReport() {
+        navigator.clipboard.writeText(document.getElementById('report-output').innerText).then(() => alert('已複製！'));
+    }
+
+    function initLogPane() {
+        const select = document.getElementById('log-date-select');
+        select.innerHTML = '';
+        for (let i = 1; i <= 30; i++) { select.add(new Option(`${i}日`, i)); }
+
+        let todayDate = new Date();
+        let tMonth = todayDate.getMonth() + 1;
+        let tDay = todayDate.getDate();
+        let targetMonthStr = `${todayDate.getFullYear() - 1911}年${tMonth}月`;
+
+        if (targetMonthStr === currentMonth && tDay >= 1 && tDay <= 30) {
+            select.value = tDay;
+        } else {
+            select.value = 7;
+        }
+
+        initLogProjectSelect();
+        renderLogForm();
+    }
+
+    function initLogProjectSelect() {
+        const projSelect = document.getElementById('log-project-select');
+        projSelect.innerHTML = '';
+        appData[currentMonth].sites.forEach(s => {
+            if (!s.isWarrantyRoot) {
+                projSelect.add(new Option(s.title, s.id));
+            }
+        });
+
+        if (currentSiteId && currentSiteId !== 'report_tab' && currentSiteId !== 'log_tab' && currentSiteId !== 'export_tab') {
+            projSelect.value = currentSiteId;
+        }
+    }
+
+    function onLogProjectChange() { renderLogForm(); }
+
+    function renderLogForm() {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        if (!siteId) return;
+        if (!appData[currentMonth].logs[siteId]) appData[currentMonth].logs[siteId] = {};
+        if (!appData[currentMonth].logs[siteId][dayIndex]) {
+            appData[currentMonth].logs[siteId][dayIndex] = { 
+                weatherAm: '晴', 
+                weatherPm: '晴', 
+                progress: '', 
+                trades: {}, 
+                customTrades: [
+                    { name: "自訂工1", val: "" },
+                    { name: "自訂工2", val: "" },
+                    { name: "自訂工3", val: "" }
+                ], 
+                sampling: '', 
+                notice: '', 
+                important: '' 
+            };
+        }
+        let log = appData[currentMonth].logs[siteId][dayIndex];
+        if (!log.customTrades) {
+            log.customTrades = [
+                { name: "自訂工1", val: "" },
+                { name: "自訂工2", val: "" },
+                { name: "自訂工3", val: "" }
+            ];
+        }
+
+        document.getElementById('log-weekday').value = getWeekdayString(currentMonth, dayIndex);
+        document.getElementById('log-weather-am').value = log.weatherAm || "晴";
+        document.getElementById('log-weather-pm').value = log.weatherPm || "晴";
+        document.getElementById('log-progress').value = log.progress || "";
+        document.getElementById('log-sampling').value = log.sampling || "";
+        document.getElementById('log-notice').value = log.notice || "";
+        document.getElementById('log-important').value = log.important || "";
+
+        if (!log.workersSummary && appData[currentMonth].data[siteId]) {
+            let sW = appData[currentMonth].data[siteId].days[dayIndex - 1];
+            log.workersSummary = Array.from(new Set([...sW.amWorkers, ...sW.pmWorkers])).join('、');
+        }
+        document.getElementById('log-workers-summary').value = log.workersSummary || '';
+
+        const grid = document.getElementById('log-trades-grid');
+        grid.innerHTML = '';
+        tradeList.forEach(t => {
+            let val = (log.trades && log.trades[t]) || '';
+            grid.innerHTML += `<div class="log-field"><span>${t}</span><input type="text" value="${val}" oninput="updateTrade('${t}', this.value)"></div>`;
+        });
+        
+        log.customTrades.forEach((ct, cIdx) => {
+            grid.innerHTML += `
+                <div class="log-field" style="background: #fffbeb; border: 1px dashed #d97706;">
+                    <input type="text" class="custom-trade-name" value="${ct.name}" oninput="updateCustomTradeName(${cIdx}, this.value)" placeholder="自訂工種">
+                    <input type="text" value="${ct.val}" oninput="updateCustomTradeVal(${cIdx}, this.value)">
+                </div>
+            `;
+        });
+
+        generateLogText();
+    }
+
+    function updateTrade(t, val) {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        if (!appData[currentMonth].logs[siteId][dayIndex].trades) appData[currentMonth].logs[siteId][dayIndex].trades = {};
+        appData[currentMonth].logs[siteId][dayIndex].trades[t] = val;
+        saveDB(); generateLogText();
+    }
+
+    function updateCustomTradeName(idx, val) {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        appData[currentMonth].logs[siteId][dayIndex].customTrades[idx].name = val;
+        saveDB(); generateLogText();
+    }
+
+    function updateCustomTradeVal(idx, val) {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        appData[currentMonth].logs[siteId][dayIndex].customTrades[idx].val = val;
+        saveDB(); generateLogText();
+    }
+
+    function saveLogData() {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        if (!siteId) return;
+        let log = appData[currentMonth].logs[siteId][dayIndex];
+        log.weatherAm = document.getElementById('log-weather-am').value;
+        log.weatherPm = document.getElementById('log-weather-pm').value;
+        log.workersSummary = document.getElementById('log-workers-summary').value;
+        log.progress = document.getElementById('log-progress').value;
+        log.sampling = document.getElementById('log-sampling').value;
+        log.notice = document.getElementById('log-notice').value;
+        log.important = document.getElementById('log-important').value;
+        saveDB(); generateLogText();
+    }
+
+    function formatProgressOnBlur(textarea) {
+        let val = textarea.value;
+        if (!val.trim()) return;
+        let lines = val.split('\n');
+        let blueBoxNums = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+        let formatted = lines.map((line, idx) => {
+            let clean = line.replace(/^((?:\d{1,2}(?:\uFE0F?\u20E3)?|[①-⑽➊-➓])[\.、\s]*)/, '').trim();
+            if (!clean) return '';
+            let numSymbol = (idx < 10) ? blueBoxNums[idx] : `${idx + 1}.`;
+            return `${numSymbol} ${clean}`;
+        }).filter(l => l !== '').join('\n');
+        
+        textarea.value = formatted;
+        saveLogData();
+    }
+
+    function generateLogText() {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        if (!siteId) return;
+        let log = appData[currentMonth].logs[siteId][dayIndex];
+        let pTitle = document.getElementById('log-project-select').selectedOptions[0].text;
+        
+        let tTextArr = tradeList.map(t => `${t}-${log.trades && log.trades[t] || ''}人`);
+        if (log.customTrades) {
+            log.customTrades.forEach(ct => {
+                let cVal = ct.val ? ct.val.trim() : '';
+                let cName = ct.name ? ct.name.trim() : '';
+                if (cVal !== '' || (cName !== '' && !cName.startsWith('自訂工'))) {
+                    let displayName = cName !== '' ? cName : '自訂工';
+                    let displayVal = cVal !== '' ? cVal : '0';
+                    tTextArr.push(`${displayName}-${displayVal}人`);
+                }
+            });
+        }
+        let tText = tTextArr.join('\n');
+        
+        let rawProgress = log.progress || '';
+        let lines = rawProgress.split('\n');
+        let blueBoxNums = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+        let formattedProgress = lines.map((line, idx) => {
+            let clean = line.replace(/^((?:\d{1,2}(?:\uFE0F?\u20E3)?|[①-⑽➊-➓])[\.、\s]*)/, '').trim();
+            if (!clean) return '';
+            let numSymbol = (idx < 10) ? blueBoxNums[idx] : `${idx + 1}.`;
+            return `${numSymbol} ${clean}`;
+        }).filter(l => l !== '').join('\n');
+
+        document.getElementById('log-text-output').innerText = 
+`工程名稱：${pTitle}
+日期:${currentMonth}${dayIndex}日 ${getWeekdayString(currentMonth, dayIndex)}
+天氣:上午:${log.weatherAm}、下午:${log.weatherPm}
+
+🚧出工人員：
+${log.workersSummary}
+
+今日施工進度⬇️
+${formattedProgress}
+
+出工人數：
+${tText}
+🌟施工取樣試驗紀錄：${log.sampling}
+🌟通知協力廠商辦理事項：${log.notice}
+🌟重要事項紀錄：${log.important}`;
+    }
+
+    function copyLogReport() {
+        formatProgressOnBlur(document.getElementById('log-progress'));
+        navigator.clipboard.writeText(document.getElementById('log-text-output').innerText).then(() => alert('已複製！'));
+    }
+
+    function renderExportPreview() {
+        let container = document.getElementById('export-preview-table');
+        let html = `<h3 style="padding-left: 5px; margin-bottom: 5px;">${currentMonth} 總表預覽</h3>`;
+        
+        appData[currentMonth].sites.forEach(site => {
+            if (site.isWarrantyRoot) {
+                let subList = appData[currentMonth].warrantySubSites && appData[currentMonth].warrantySubSites[site.id] ? appData[currentMonth].warrantySubSites[site.id] : [];
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; padding-left: 5px; padding-right: 5px;">
+                        <h4 style="color: #2d3748; margin: 0;">${site.name}（保固案場總覽）</h4>
+                        <div>
+                            <button class="btn btn-red btn-sm" onclick="exportSingleSiteMonthly('${site.id}')">📥 下載保固案場 Excel</button>
+                        </div>
+                    </div>
+                `;
+                html += `<table><thead><tr><th>日期</th><th>維修案場名稱</th><th>出工人員</th><th>維修項目</th><th>備註</th></tr></thead><tbody>`;
+                if (subList.length === 0) {
+                    html += `<tr><td colspan="5" style="color:#718096; padding:15px;">尚無紀錄</td></tr>`;
+                } else {
+                    subList.forEach(sub => {
+                        html += `<tr><td>${sub.date || ''}</td><td>${sub.name || ''}</td><td>${sub.workers || ''}</td><td>${sub.project || ''}</td><td>${sub.note || ''}</td></tr>`;
+                    });
+                }
+                html += `</tbody></table>`;
+                return;
+            }
+
+            let sData = appData[currentMonth].data[site.id];
+            if (!sData) return;
+            let sWorkers = sData.workers;
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; padding-left: 5px; padding-right: 5px;">
+                    <h4 style="color: #2d3748; margin: 0;">${site.name}</h4>
+                    <div>
+                        <button class="btn btn-red btn-sm" onclick="exportSingleSiteMonthly('${site.id}')">📥 下載此案場當月 Excel</button>
+                        <button class="btn btn-blue btn-sm" onclick="exportSingleSiteYearly('${site.id}')">📈 下載此案場年度 Excel</button>
+                    </div>
+                </div>
+            `;
+            html += `<table><thead><tr><th>日期</th><th>上午人數</th><th>上午工項</th><th>下午人數</th><th>下午工項</th><th>未出工人數</th><th>備註</th></tr></thead><tbody>`;
+            sData.days.forEach(d => {
+                let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+                html += `<tr>
+                    <td>${currentMonth}${d.dateStr}</td>
+                    <td>${d.amWorkers.length}人</td>
+                    <td style="text-align:left;">${d.amProject || ''}</td>
+                    <td>${d.pmWorkers.length}人</td>
+                    <td style="text-align:left;">${d.pmProject || ''}</td>
+                    <td>${unworked}</td>
+                    <td>${d.note || ''}</td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function exportToExcel() {
+        let wb = XLSX.utils.book_new();
+        appData[currentMonth].sites.forEach(site => {
+            if (site.isWarrantyRoot) {
+                let subList = appData[currentMonth].warrantySubSites && appData[currentMonth].warrantySubSites[site.id] ? appData[currentMonth].warrantySubSites[site.id] : [];
+                let rows = [
+                    [`${currentMonth} - 保固中案場總表`],
+                    [],
+                    ['日期', '維修案場名稱', '出工人員', '維修項目', '備註']
+                ];
+                subList.forEach(sub => {
+                    rows.push([sub.date || '', sub.name || '', sub.workers || '', sub.project || '', sub.note || '']);
+                });
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), site.name.replace(/[:\\/?*\[\]]/g, "_"));
+                return;
+            }
+
+            let meta = appData[currentMonth].meta && appData[currentMonth].meta[site.id] ? appData[currentMonth].meta[site.id] : {};
+            let sData = appData[currentMonth].data[site.id];
+            if (!sData) return;
+            let sWorkers = sData.workers;
+            let rows = [
+                [`${currentMonth} - ${site.name} 總表`],
+                [`開工日期: ${meta.startDate || '未填'}  |  完工工期: 自動計算  |  工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}  |  展延: ${meta.extension || 0}  |  停工: ${meta.suspensionDate || '無'}  |  復工: ${meta.resumptionDate || '無'}`],
+                [],
+                ['項次', '日期', '上午人數', '上午工項', '上午名單', '上午時間', '上午照片', '下午人數', '下午工項', '下午名單', '下午時間', '下午照片', '未出工人員', '備註']
+            ];
+            sData.days.forEach(d => {
+                let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+                rows.push([
+                    d.dayIndex, `${currentMonth}${d.dateStr}`, 
+                    d.amWorkers.length, d.amProject || '', d.amWorkers.join('、'), d.amTime || '', d.amPhotoName || '', 
+                    d.pmWorkers.length, d.pmProject || '', d.pmWorkers.join('、'), d.pmTime || '', d.pmPhotoName || '', 
+                    unworked, d.note || ''
+                ]);
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), site.name.replace(/[:\\/?*\[\]]/g, "_"));
+        });
+        XLSX.writeFile(wb, `全部案場工程總表_${currentMonth}.xlsx`);
+    }
+
+    function exportSingleSiteMonthly(siteId) {
+        let site = appData[currentMonth].sites.find(s => s.id === siteId);
+        if (!site) return;
+        let wb = XLSX.utils.book_new();
+        
+        if (site.isWarrantyRoot) {
+            let subList = appData[currentMonth].warrantySubSites && appData[currentMonth].warrantySubSites[site.id] ? appData[currentMonth].warrantySubSites[site.id] : [];
+            let rows = [
+                [`${currentMonth} - 保固中案場總表`],
+                [],
+                ['日期', '維修案場名稱', '出工人員', '維修項目', '備註']
+            ];
+            subList.forEach(sub => {
+                rows.push([sub.date || '', sub.name || '', sub.workers || '', sub.project || '', sub.note || '']);
+            });
+            let ws = XLSX.utils.aoa_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, site.name.replace(/[:\\/?*\[\]]/g, "_"));
+            XLSX.writeFile(wb, `${site.name}_工程總表_${currentMonth}.xlsx`);
+            return;
+        }
+
+        let meta = appData[currentMonth].meta && appData[currentMonth].meta[site.id] ? appData[currentMonth].meta[site.id] : {};
+        let sData = appData[currentMonth].data[site.id];
+        let sWorkers = sData.workers;
+        let rows = [
+            [`${currentMonth} - ${site.name} 總表`],
+            [`開工日期: ${meta.startDate || '未填'}  |  完工工期: 自動計算  |  工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}  |  展延: ${meta.extension || 0}  |  停工: ${meta.suspensionDate || '無'}  |  復工: ${meta.resumptionDate || '無'}`],
+            [],
+            ['項次', '日期', '上午人數', '上午工項', '上午名單', '上午時間', '上午照片', '下午人數', '下午工項', '下午名單', '下午時間', '下午照片', '未出工人員', '備註']
+        ];
+        sData.days.forEach(d => {
+            let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+            rows.push([
+                d.dayIndex, `${currentMonth}${d.dateStr}`, 
+                d.amWorkers.length, d.amProject || '', d.amWorkers.join('、'), d.amTime || '', d.amPhotoName || '', 
+                d.pmWorkers.length, d.pmProject || '', d.pmWorkers.join('、'), d.pmTime || '', d.pmPhotoName || '', 
+                unworked, d.note || ''
+            ]);
+        });
+        let ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, site.name.replace(/[:\\/?*\[\]]/g, "_"));
+        XLSX.writeFile(wb, `${site.name}_工程總表_${currentMonth}.xlsx`);
+    }
+
+    function exportYearlyToExcel() {
+        let yearMatch = currentMonth.match(/(\d+)年/);
+        if (!yearMatch) { alert('無法辨識當前年份！'); return; }
+        let targetYear = yearMatch[1] + '年';
+        let wb = XLSX.utils.book_new();
+        let allMonths = Object.keys(appData).filter(m => m.startsWith(targetYear));
+        
+        let siteMap = {};
+        allMonths.forEach(m => {
+            appData[m].sites.forEach(s => {
+                if (!siteMap[s.id]) siteMap[s.id] = { name: s.name, isWarrantyRoot: s.isWarrantyRoot };
+            });
+        });
+
+        Object.keys(siteMap).forEach(siteId => {
+            let siteInfo = siteMap[siteId];
+            let siteName = siteInfo.name;
+            if (siteInfo.isWarrantyRoot) {
+                let rows = [[`${targetYear} ${siteName} 年度總表`], []];
+                allMonths.forEach(m => {
+                    let monthData = appData[m];
+                    if (monthData && monthData.warrantySubSites && monthData.warrantySubSites[siteId]) {
+                        let subList = monthData.warrantySubSites[siteId];
+                        rows.push([`${m} 統計明細`]);
+                        rows.push(['日期', '維修案場名稱', '出工人員', '維修項目', '備註']);
+                        subList.forEach(sub => {
+                            rows.push([sub.date || '', sub.name || '', sub.workers || '', sub.project || '', sub.note || '']);
+                        });
+                        rows.push([]);
+                    }
+                });
+                let ws = XLSX.utils.aoa_to_sheet(rows);
+                XLSX.utils.book_append_sheet(wb, ws, siteName.replace(/[:\\/?*\[\]]/g, "_"));
+                return;
+            }
+
+            let rows = [[`${targetYear} ${siteName} 年度出工人數統計與施工總表`], []];
+            let totalWorkDays = 0;
+
+            allMonths.forEach(m => {
+                let monthData = appData[m];
+                if (monthData && monthData.data && monthData.data[siteId]) {
+                    let sData = monthData.data[siteId];
+                    let sWorkers = sData.workers;
+                    let meta = monthData.meta && monthData.meta[siteId] ? monthData.meta[siteId] : {};
+                    rows.push([`${m} 統計明細 (開工: ${meta.startDate || '未填'}, 工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}, 展延: ${meta.extension || 0})`]);
+                    rows.push(['項次', '日期', '上午人數', '上午工項', '上午名單', '上午時間', '下午人數', '下午工項', '下午名單', '下午時間', '未出工人員', '備註']);
+                    
+                    sData.days.forEach(d => {
+                        let hasWorked = d.amWorkers.length > 0 || d.pmWorkers.length > 0 || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
+                        if (hasWorked) totalWorkDays++;
+                        let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+                        rows.push([
+                            d.dayIndex, `${m}${d.dateStr}`,
+                            d.amWorkers.length, d.amProject || '', d.amWorkers.join('、'), d.amTime || '',
+                            d.pmWorkers.length, d.pmProject || '', d.pmWorkers.join('、'), d.pmTime || '',
+                            unworked, d.note || ''
+                        ]);
+                    });
+                    rows.push([]);
+                }
+            });
+
+            rows.splice(2, 0, ['🌟 年度總結算：', `此案場在 ${targetYear} 總共施作天數： ${totalWorkDays} 天`]);
+            rows.splice(3, 0, []);
+
+            let ws = XLSX.utils.aoa_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, siteName.replace(/[:\\/?*\[\]]/g, "_"));
+        });
+
+        XLSX.writeFile(wb, `全部案場工程年度總表_${targetYear}.xlsx`);
+    }
+
+    function exportSingleSiteYearly(siteId) {
+        exportYearlyToExcel();
+    }
+
+    initUI();
+</script>
+
+</body>
+</html>
