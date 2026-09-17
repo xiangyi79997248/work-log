@@ -316,7 +316,6 @@
             
             <label style="margin-left: 8px;"><strong>月：</strong></label>
             <select id="month-select" onchange="switchMonth(this.value)"></select>
-            <!-- 刪除此月功能按鈕（含 Google 試算表同步刪除） -->
             <button class="btn btn-sm" style="background:#c53030 !important; color:#fff;" onclick="deleteCurrentMonth()">🗑️ 刪除此月</button>
 
             <span style="margin-left: 8px;">新增：</span>
@@ -445,7 +444,8 @@
 </div>
 
 <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzz7k4b31JPPUeth8sAmpq7JhR60y9WJrSmsziky3c8yyEEMtrAxxLzYy4ddQs_WMTw/exec";
+    // 已完整綁定你產生的最新 Google Apps Script Web App 網址
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6DjLI5VvI-FM0_gXvwV11zSQ5en0qxxP3bfJbtbbmEFeMvTIFaMojbN2o8jPTNHw/exec";
     const DB_KEY = 'construction_master_db_cloud';
 
     const defaultWorkers = ["盧明君", "林智宇", "吳炫德", "邱龍展"];
@@ -1706,6 +1706,7 @@ ${tText}
         navigator.clipboard.writeText(document.getElementById('log-text-output').innerText).then(() => alert('已複製！'));
     }
 
+    // 渲染總表案場切換按鈕列
     function renderExportSiteFilters() {
         const container = document.getElementById('export-site-filter-container');
         if (!container) return;
@@ -1728,6 +1729,7 @@ ${tText}
         });
     }
 
+    // 渲染出工人數分案場總表
     function renderExportPreview() {
         let container = document.getElementById('export-preview-table');
         let html = '';
@@ -2079,7 +2081,7 @@ ${tText}
                     let sWorkers = sData.workers;
                     let meta = monthData.meta && monthData.meta[siteId] ? monthData.meta[siteId] : {};
                     rows.push([`${m} 統計明細 (開工: ${meta.startDate || '未填'}, 工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}, 展延: ${meta.extension || 0})`]);
-                    rows.push(['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '下午人數', '下午出工名單', '下午工項', '下午時間', '未出工人員', '備註']);
+                    rows.push(['項次', '日期', '上午人數', '上午名單', '上午工項', '上午時間', '下午人數', '下午名單', '下午工項', '下午時間', '未出工人員', '備註']);
                     
                     sData.days.forEach(d => {
                         let hasWorked = d.amWorkers.length > 0 || d.pmWorkers.length > 0 || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
