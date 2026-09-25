@@ -240,7 +240,13 @@
         .worker-badge {
             display: inline-flex; align-items: center; gap: 3px; background: #edf2f7; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid #cbd5e0;
         }
-        .worker-badge input { cursor: pointer; }
+        .worker-badge input[type="checkbox"] { cursor: pointer; }
+        .other-worker-badge {
+            background: #e6fffa !important; border: 1px solid #319795 !important; color: #1d4044 !important; font-weight: bold; cursor: default;
+        }
+        .other-worker-input {
+            width: 38px; text-align: center; padding: 2px 3px; border: 1px solid #81e6d9; border-radius: 3px; font-size: 12px; font-weight: bold; color: #0d3838;
+        }
         .unworked-display {
             color: #e53e3e; font-weight: bold; background: #fff5f5; padding: 5px 6px; border-radius: 4px; border: 1px solid #fed7d7; display: inline-block; font-size: 12px;
         }
@@ -387,8 +393,11 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display: block; margin-bottom: 5px;"><strong>出工人員：</strong></label>
-                    <input type="text" id="log-workers-summary" oninput="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px; background-color: #fff; border: 1px solid #cbd5e0; box-sizing: border-box;" placeholder="自動帶入，可修改">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <label style="margin: 0;"><strong>出工人員：</strong></label>
+                        <button type="button" class="btn btn-sm btn-blue" onclick="syncWorkersSummaryToLog()" style="padding: 2px 8px; font-size: 11px;">🔄 依出工表重新整理</button>
+                    </div>
+                    <input type="text" id="log-workers-summary" oninput="onManualWorkerInput()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px; background-color: #fff; border: 1px solid #cbd5e0; box-sizing: border-box;" placeholder="自動帶入，含新人*幾">
                 </div>
             </div>
             <div style="margin-bottom: 15px;">
@@ -489,11 +498,13 @@
                         dayIndex: i, 
                         dateStr: `${i}日`, 
                         amWorkers: [], 
+                        amOtherCount: '',
                         amProject: '', 
                         amTime: '', 
                         amPhotoName: '', 
                         amPhoto: '', 
                         pmWorkers: [], 
+                        pmOtherCount: '',
                         pmProject: '', 
                         pmTime: '', 
                         pmPhotoName: '', 
@@ -505,6 +516,7 @@
                         weatherAm: "晴", 
                         weatherPm: "晴", 
                         workersSummary: "", 
+                        isManualSummary: false,
                         progress: "", 
                         trades: {}, 
                         customTrades: [
@@ -560,6 +572,17 @@
                     });
                 }
             });
+            if (appData[m].data) {
+                Object.keys(appData[m].data).forEach(sId => {
+                    let siteData = appData[m].data[sId];
+                    if (siteData && siteData.days) {
+                        siteData.days.forEach(d => {
+                            if (d.amOtherCount === undefined) d.amOtherCount = '';
+                            if (d.pmOtherCount === undefined) d.pmOtherCount = '';
+                        });
+                    }
+                });
+            }
             if (!appData[m].warrantySubSites) appData[m].warrantySubSites = {};
             if (!appData[m].warrantySubSites['warranty_pool']) {
                 appData[m].warrantySubSites['warranty_pool'] = [];
@@ -784,11 +807,13 @@
             if (site.isWarrantyRoot) return;
             let dayList = []; let siteLogs = {};
             for (let i = 1; i <= 30; i++) {
-                dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amProject: '', amTime: '', amPhotoName: '', amPhoto: '', pmWorkers: [], pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', note: '' });
+                dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amOtherCount: '', amProject: '', amTime: '', amPhotoName: '', amPhoto: '', pmWorkers: [], pmOtherCount: '', pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', note: '' });
                 siteLogs[i] = { 
                     selectedSiteId: site.id, 
                     weatherAm: '晴', 
                     weatherPm: '晴', 
+                    workersSummary: '',
+                    isManualSummary: false,
                     progress: '', 
                     trades: {}, 
                     customTrades: [
@@ -829,11 +854,13 @@
 
         let dayList = []; let siteLogs = {};
         for (let i = 1; i <= 30; i++) {
-            dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amProject: '', amTime: '', amPhotoName: '', amPhoto: '', pmWorkers: [], pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', note: '' });
+            dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amOtherCount: '', amProject: '', amTime: '', amPhotoName: '', amPhoto: '', pmWorkers: [], pmOtherCount: '', pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', note: '' });
             siteLogs[i] = { 
                 selectedSiteId: siteId, 
                 weatherAm: '晴', 
                 weatherPm: '晴', 
+                workersSummary: '',
+                isManualSummary: false,
                 progress: '', 
                 trades: {}, 
                 customTrades: [
@@ -1134,11 +1161,11 @@
                         <tr>
                             <th style="width: 60px;">項次<div class="resizer" data-col="0"></div></th>
                             <th style="width: 110px;">日期<div class="resizer" data-col="1"></div></th>
-                            <th style="width: 280px;">上午出工人員<div class="resizer" data-col="2"></div></th>
+                            <th style="width: 290px;">上午出工人員<div class="resizer" data-col="2"></div></th>
                             <th style="width: 150px;">上午施工項目<div class="resizer" data-col="3"></div></th>
                             <th style="width: 110px;">上午報班時間<div class="resizer" data-col="4"></div></th>
                             <th style="width: 130px;">上午報班照片<div class="resizer" data-col="5"></div></th>
-                            <th style="width: 280px;">下午出工人員<div class="resizer" data-col="6"></div></th>
+                            <th style="width: 290px;">下午出工人員<div class="resizer" data-col="6"></div></th>
                             <th style="width: 150px;">下午施工項目<div class="resizer" data-col="7"></div></th>
                             <th style="width: 110px;">下午報班時間<div class="resizer" data-col="8"></div></th>
                             <th style="width: 130px;">下午報班照片<div class="resizer" data-col="9"></div></th>
@@ -1170,14 +1197,24 @@
         return `
             <td style="color: #1a202c; font-weight: bold;">${row.dayIndex}</td>
             <td><strong style="white-space: nowrap;">${currentMonth}${row.dateStr}</strong></td>
-            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.amWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'am', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
+            <td>
+                <div class="worker-selector">
+                    ${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.amWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'am', '${w}', this.checked)">${w}</label>`).join('')}
+                    <label class="worker-badge other-worker-badge" title="可自行填寫其他出工人數">其他:<input type="number" min="0" class="other-worker-input" value="${row.amOtherCount !== undefined && row.amOtherCount !== null ? row.amOtherCount : ''}" placeholder="0" oninput="updateOtherCount(${index}, 'am', this.value)">人</label>
+                </div>
+            </td>
             <td><textarea class="resizable-box" oninput="updateField(${index}, 'amProject', this.value)">${row.amProject || ''}</textarea></td>
             <td><input type="time" value="${row.amTime || ''}" onchange="updateField(${index}, 'amTime', this.value)" style="width: 80px; padding: 4px; font-size: 12px;"></td>
             <td>
                 <input type="file" accept="image/*" onchange="updateRowPhoto(${index}, 'am', this)" style="font-size: 10px; width: 110px; margin-bottom: 2px;">
                 ${row.amPhoto ? `<div style="display:flex; align-items:center; justify-content:center; gap:4px;"><a href="javascript:void(0)" onclick="openImageModal('${row.amPhoto}', '上午工項: ${row.amProject || '無'}')" style="font-size: 11px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75px;">${row.amPhotoName}</a><button class="btn btn-sm" style="background:#e53e3e; color:#fff; padding:1px 4px; font-size:10px;" onclick="deleteRowPhoto(${index}, 'am')">❌</button></div>` : `<div style="font-size: 10px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 105px;">${row.amPhotoName || ''}</div>`}
             </td>
-            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.pmWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'pm', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
+            <td>
+                <div class="worker-selector">
+                    ${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.pmWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'pm', '${w}', this.checked)">${w}</label>`).join('')}
+                    <label class="worker-badge other-worker-badge" title="可自行填寫其他出工人數">其他:<input type="number" min="0" class="other-worker-input" value="${row.pmOtherCount !== undefined && row.pmOtherCount !== null ? row.pmOtherCount : ''}" placeholder="0" oninput="updateOtherCount(${index}, 'pm', this.value)">人</label>
+                </div>
+            </td>
             <td><textarea class="resizable-box" oninput="updateField(${index}, 'pmProject', this.value)">${row.pmProject || ''}</textarea></td>
             <td><input type="time" value="${row.pmTime || ''}" onchange="updateField(${index}, 'pmTime', this.value)" style="width: 80px; padding: 4px; font-size: 12px;"></td>
             <td>
@@ -1324,9 +1361,9 @@
                 canvas.height = height;
                 let ctx = canvas.getContext("2d");
                 ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
+                ctx.imageSmoothingQuality = 'medium';
                 ctx.drawImage(img, 0, 0, width, height);
-                let compressedDataUrl = canvas.toDataURL("image/jpeg", 0.55);
+                let compressedDataUrl = canvas.toDataURL("image/jpeg", 0.4);
                 callback(compressedDataUrl);
             };
         };
@@ -1335,7 +1372,7 @@
     function updateRowPhoto(dayIndex, session, input) {
         if (input.files && input.files[0]) {
             let file = input.files[0];
-            compressImage(file, 650, function(compressedUrl) {
+            compressImage(file, 450, function(compressedUrl) {
                 let siteData = appData[currentMonth].data[currentSiteId];
                 if (session === 'am') {
                     siteData.days[dayIndex].amPhoto = compressedUrl;
@@ -1379,6 +1416,33 @@
         });
     }
 
+    // 計算自動帶入施工日誌的工人字串（含 新人*幾）
+    function calculateAutoWorkersSummary(siteId, dayNum) {
+        if (!appData[currentMonth] || !appData[currentMonth].data || !appData[currentMonth].data[siteId]) return '';
+        let sData = appData[currentMonth].data[siteId];
+        let dayRow = sData.days[dayNum - 1];
+        if (!dayRow) return '';
+        let masterWorkers = sData.workers || [];
+        let combined = Array.from(new Set([...(dayRow.amWorkers || []), ...(dayRow.pmWorkers || [])]));
+        let sorted = sortSelectedWorkersBySiteMaster(combined, masterWorkers);
+        
+        let amO = parseInt(dayRow.amOtherCount) || 0;
+        let pmO = parseInt(dayRow.pmOtherCount) || 0;
+        let maxOther = Math.max(amO, pmO);
+        if (maxOther > 0) {
+            sorted.push(`新人*${maxOther}`);
+        }
+        return sorted.join('、');
+    }
+
+    // 當出工表有變更時，自動更新施工日誌的出工人員（如果尚未手動改寫）
+    function syncAutoWorkersSummaryToLog(siteId, dayNum) {
+        if (!appData[currentMonth].logs || !appData[currentMonth].logs[siteId]) return;
+        let log = appData[currentMonth].logs[siteId][dayNum];
+        if (!log || log.isManualSummary) return;
+        log.workersSummary = calculateAutoWorkersSummary(siteId, dayNum);
+    }
+
     function updateWorker(dayIndex, type, workerName, isChecked) {
         let siteData = appData[currentMonth].data[currentSiteId];
         let dayData = siteData.days[dayIndex];
@@ -1386,7 +1450,21 @@
         if (isChecked) { if (!targetList.includes(workerName)) targetList.push(workerName); }
         else { let idx = targetList.indexOf(workerName); if (idx > -1) targetList.splice(idx, 1); }
         saveDB();
+        syncAutoWorkersSummaryToLog(currentSiteId, dayIndex + 1);
         updateSingleRowUI(dayIndex);
+    }
+
+    function updateOtherCount(dayIndex, type, val) {
+        let siteData = appData[currentMonth].data[currentSiteId];
+        let row = siteData.days[dayIndex];
+        let num = val === '' ? '' : Math.max(0, parseInt(val) || 0);
+        if (type === 'am') {
+            row.amOtherCount = num;
+        } else {
+            row.pmOtherCount = num;
+        }
+        saveDB();
+        syncAutoWorkersSummaryToLog(currentSiteId, dayIndex + 1);
     }
 
     function updateSingleRowUI(dayIndex) {
@@ -1464,8 +1542,11 @@
             if (!sData) return;
             let dData = sData.days[selectIndex];
             
-            let hasAm = dData.amWorkers.length > 0 || (dData.amProject && dData.amProject.trim() !== '');
-            let hasPm = dData.pmWorkers.length > 0 || (dData.pmProject && dData.pmProject.trim() !== '');
+            let amOther = parseInt(dData.amOtherCount) || 0;
+            let pmOther = parseInt(dData.pmOtherCount) || 0;
+
+            let hasAm = dData.amWorkers.length > 0 || amOther > 0 || (dData.amProject && dData.amProject.trim() !== '');
+            let hasPm = dData.pmWorkers.length > 0 || pmOther > 0 || (dData.pmProject && dData.pmProject.trim() !== '');
 
             if (hasAm) activeSitesAm.push({ site, dData });
             if (hasPm) activeSitesPm.push({ site, dData });
@@ -1483,10 +1564,14 @@
         activeSitesAm.forEach(({ site, dData }) => {
             let sWorkers = appData[currentMonth].data[site.id].workers;
             let sortedAmWorkers = sortSelectedWorkersBySiteMaster(dData.amWorkers, sWorkers);
-            let amStr = sortedAmWorkers.length > 0 ? sortedAmWorkers.join('、') : '無';
+            let amDisplayList = [...sortedAmWorkers];
+            let amOther = parseInt(dData.amOtherCount) || 0;
+            if (amOther > 0) amDisplayList.push(`新人*${amOther}`);
+            let totalAmCount = dData.amWorkers.length + amOther;
+            let amStr = amDisplayList.length > 0 ? amDisplayList.join('、') : '無';
             let unworked = sWorkers.filter(w => !dData.amWorkers.includes(w) && !dData.pmWorkers.includes(w)).join('、') || '無';
             amR.push(
-`上午出工：共${dData.amWorkers.length}人（${amStr}），未出工：${unworked}
+`上午出工：共${totalAmCount}人（${amStr}），未出工：${unworked}
 案場：${site.name}
 項目：${dData.amProject || '無'} (時間: ${dData.amTime || '未填'})`
             );
@@ -1496,10 +1581,14 @@
         activeSitesPm.forEach(({ site, dData }) => {
             let sWorkers = appData[currentMonth].data[site.id].workers;
             let sortedPmWorkers = sortSelectedWorkersBySiteMaster(dData.pmWorkers, sWorkers);
-            let pmStr = sortedPmWorkers.length > 0 ? sortedPmWorkers.join('、') : '無';
+            let pmDisplayList = [...sortedPmWorkers];
+            let pmOther = parseInt(dData.pmOtherCount) || 0;
+            if (pmOther > 0) pmDisplayList.push(`新人*${pmOther}`);
+            let totalPmCount = dData.pmWorkers.length + pmOther;
+            let pmStr = pmDisplayList.length > 0 ? pmDisplayList.join('、') : '無';
             let unworked = sWorkers.filter(w => !dData.amWorkers.includes(w) && !dData.pmWorkers.includes(w)).join('、') || '無';
             pmR.push(
-`下午出工：共${dData.pmWorkers.length}人（${pmStr}），未出工：${unworked}
+`下午出工：共${totalPmCount}人（${pmStr}），未出工：${unworked}
 案場：${site.name}
 項目：${dData.pmProject || '無'} (時間: ${dData.pmTime || '未填'})`
             );
@@ -1558,6 +1647,29 @@
 
     function onLogProjectChange() { renderLogForm(); }
 
+    function syncWorkersSummaryToLog() {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        if (!siteId) return;
+        let autoStr = calculateAutoWorkersSummary(siteId, dayIndex);
+        let log = appData[currentMonth].logs[siteId][dayIndex];
+        log.workersSummary = autoStr;
+        log.isManualSummary = false;
+        document.getElementById('log-workers-summary').value = autoStr;
+        saveDB();
+        generateLogText();
+        alert('已成功依出工表重新整理出工人員！');
+    }
+
+    function onManualWorkerInput() {
+        let dayIndex = parseInt(document.getElementById('log-date-select').value);
+        let siteId = document.getElementById('log-project-select').value;
+        if (!siteId) return;
+        let log = appData[currentMonth].logs[siteId][dayIndex];
+        log.isManualSummary = true;
+        saveLogData();
+    }
+
     function renderLogForm() {
         let dayIndex = parseInt(document.getElementById('log-date-select').value);
         let siteId = document.getElementById('log-project-select').value;
@@ -1567,6 +1679,8 @@
             appData[currentMonth].logs[siteId][dayIndex] = { 
                 weatherAm: '晴', 
                 weatherPm: '晴', 
+                workersSummary: '',
+                isManualSummary: false,
                 progress: '', 
                 trades: {}, 
                 customTrades: [
@@ -1596,11 +1710,10 @@
         document.getElementById('log-notice').value = log.notice || "";
         document.getElementById('log-important').value = log.important || "";
 
-        if (!log.workersSummary && appData[currentMonth].data[siteId]) {
-            let sW = appData[currentMonth].data[siteId].days[dayIndex - 1];
-            let masterWorkers = appData[currentMonth].data[siteId].workers;
-            let combinedWorkers = Array.from(new Set([...sW.amWorkers, ...sW.pmWorkers]));
-            log.workersSummary = sortSelectedWorkersBySiteMaster(combinedWorkers, masterWorkers).join('、');
+        // 自動計算出工名單與新人*幾
+        let autoStr = calculateAutoWorkersSummary(siteId, dayIndex);
+        if (!log.isManualSummary || !log.workersSummary) {
+            log.workersSummary = autoStr;
         }
         document.getElementById('log-workers-summary').value = log.workersSummary || '';
 
@@ -1812,20 +1925,27 @@ ${tText}
             </tr></thead><tbody>`;
 
             sData.days.forEach(d => {
+                let amOther = parseInt(d.amOtherCount) || 0;
+                let pmOther = parseInt(d.pmOtherCount) || 0;
                 let sortedAmWorkers = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
                 let sortedPmWorkers = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
+                let amList = [...sortedAmWorkers];
+                if (amOther > 0) amList.push(`新人*${amOther}`);
+                let pmList = [...sortedPmWorkers];
+                if (pmOther > 0) pmList.push(`新人*${pmOther}`);
+
                 let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
                 let amPhotoThumb = d.amPhoto ? `<img src="${d.amPhoto}" style="max-height:36px; max-width:80px; object-fit:contain; border-radius:4px; border:1px solid #ccc; cursor:pointer;" onclick="openImageModal('${d.amPhoto}', '上午工項: ${d.amProject || ''}')">` : '<span style="color:#cbd5e0;">無</span>';
                 let pmPhotoThumb = d.pmPhoto ? `<img src="${d.pmPhoto}" style="max-height:36px; max-width:80px; object-fit:contain; border-radius:4px; border:1px solid #ccc; cursor:pointer;" onclick="openImageModal('${d.pmPhoto}', '下午工項: ${d.pmProject || ''}')">` : '<span style="color:#cbd5e0;">無</span>';
 
                 html += `<tr>
                     <td>${currentMonth}${d.dateStr}</td>
-                    <td>${d.amWorkers.length}人</td>
-                    <td style="text-align:left;">${sortedAmWorkers.join('、') || '無'}</td>
+                    <td>${d.amWorkers.length + amOther}人</td>
+                    <td style="text-align:left;">${amList.join('、') || '無'}</td>
                     <td style="text-align:left;">${d.amProject || ''}</td>
                     <td>${amPhotoThumb}</td>
-                    <td>${d.pmWorkers.length}人</td>
-                    <td style="text-align:left;">${sortedPmWorkers.join('、') || '無'}</td>
+                    <td>${d.pmWorkers.length + pmOther}人</td>
+                    <td style="text-align:left;">${pmList.join('、') || '無'}</td>
                     <td style="text-align:left;">${d.pmProject || ''}</td>
                     <td>${pmPhotoThumb}</td>
                     <td style="text-align:left;">${unworked}</td>
@@ -2000,13 +2120,20 @@ ${tText}
                 ['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '上午照片檔名', '下午人數', '下午出工名單', '下午工項', '下午時間', '下午照片檔名', '未出工人員', '備註']
             ];
             sData.days.forEach(d => {
+                let amOther = parseInt(d.amOtherCount) || 0;
+                let pmOther = parseInt(d.pmOtherCount) || 0;
                 let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
                 let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
+                let amList = [...sortedAm];
+                if (amOther > 0) amList.push(`新人*${amOther}`);
+                let pmList = [...sortedPm];
+                if (pmOther > 0) pmList.push(`新人*${pmOther}`);
+
                 let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
                 rows.push([
                     d.dayIndex, `${currentMonth}${d.dateStr}`, 
-                    d.amWorkers.length, sortedAm.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
-                    d.pmWorkers.length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
+                    d.amWorkers.length + amOther, amList.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
+                    d.pmWorkers.length + pmOther, pmList.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
                     unworked, d.note || ''
                 ]);
             });
@@ -2047,13 +2174,20 @@ ${tText}
             ['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '上午照片檔名', '下午人數', '下午出工名單', '下午工項', '下午時間', '下午照片檔名', '未出工人員', '備註']
         ];
         sData.days.forEach(d => {
+            let amOther = parseInt(d.amOtherCount) || 0;
+            let pmOther = parseInt(d.pmOtherCount) || 0;
             let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
             let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
+            let amList = [...sortedAm];
+            if (amOther > 0) amList.push(`新人*${amOther}`);
+            let pmList = [...sortedPm];
+            if (pmOther > 0) pmList.push(`新人*${pmOther}`);
+
             let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
             rows.push([
                 d.dayIndex, `${currentMonth}${d.dateStr}`, 
-                d.amWorkers.length, sortedAm.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
-                d.pmWorkers.length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
+                d.amWorkers.length + amOther, amList.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
+                d.pmWorkers.length + pmOther, pmList.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
                 unworked, d.note || ''
             ]);
         });
@@ -2112,15 +2246,22 @@ ${tText}
                     rows.push(['項次', '日期', '上午人數', '上午名單', '上午工項', '上午時間', '下午人數', '下午名單', '下午工項', '下午時間', '未出工人員', '備註']);
                     
                     sData.days.forEach(d => {
-                        let hasWorked = d.amWorkers.length > 0 || d.pmWorkers.length > 0 || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
+                        let amOther = parseInt(d.amOtherCount) || 0;
+                        let pmOther = parseInt(d.pmOtherCount) || 0;
+                        let hasWorked = d.amWorkers.length > 0 || amOther > 0 || d.pmWorkers.length > 0 || pmOther > 0 || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
                         if (hasWorked) totalWorkDays++;
                         let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
                         let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
+                        let amList = [...sortedAm];
+                        if (amOther > 0) amList.push(`新人*${amOther}`);
+                        let pmList = [...sortedPm];
+                        if (pmOther > 0) pmList.push(`新人*${pmOther}`);
+
                         let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
                         rows.push([
                             d.dayIndex, `${m}${d.dateStr}`,
-                            d.amWorkers.length, sortedAm.join('、'), d.amProject || '', d.amTime || '',
-                            d.pmWorkers.length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '',
+                            d.amWorkers.length + amOther, amList.join('、'), d.amProject || '', d.amTime || '',
+                            d.pmWorkers.length + pmOther, pmList.join('、'), d.pmProject || '', d.pmTime || '',
                             unworked, d.note || ''
                         ]);
                     });
@@ -2142,7 +2283,7 @@ ${tText}
         exportYearlyToExcel();
     }
 
-    // 1. 網頁開啟時自動從雲端載入最新資料
+    // 網頁開啟時自動從雲端載入最新資料
     async function autoLoadOnStart() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "正在自動同步雲端最新資料...";
@@ -2173,7 +2314,7 @@ ${tText}
     // 啟動自動雲端載入
     autoLoadOnStart();
 
-    // 2. 每 30 秒自動在背景向雲端檢查有沒有人更新
+    // 背景定時檢查更新
     setInterval(async () => {
         try {
             let res = await fetch(APPS_SCRIPT_URL);
@@ -2187,8 +2328,9 @@ ${tText}
         } catch (e) {
             // 背景同步失敗不影響使用者操作
         }
-    }, 30000);
+    }, 120000);
 </script>
 
 </body>
 </html>
+```[cite: 1]
