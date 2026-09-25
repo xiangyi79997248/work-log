@@ -894,7 +894,6 @@
         saveDB(); initUI();
     }
 
-    // 修改案場名稱：全面同步頂部標題、資料庫物件以及日誌選單[cite: 1]
     function updateCustomSiteName(val) {
         let cleanVal = val.trim();
         if (!appData[currentMonth].customSiteNames) appData[currentMonth].customSiteNames = {};
@@ -905,13 +904,11 @@
             site.title = cleanVal;
         }
 
-        // 即時替換頂部綠底白字標題
         const mainTitle = document.getElementById('main-title');
         if (mainTitle) {
             mainTitle.innerText = cleanVal;
         }
 
-        // 同步更新施工日誌下拉選單的顯示項目
         const projSelect = document.getElementById('log-project-select');
         if (projSelect) {
             for (let opt of projSelect.options) {
@@ -958,7 +955,6 @@
             let currentSite = monthSites.find(s => s.id === currentSiteId) || monthSites[0];
             currentSiteId = currentSite.id;
             
-            // 讀取最新自訂全名同步顯示於頂部
             let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[currentSite.id]) || currentSite.title || currentSite.name;
             mainTitle.innerText = displayTitle;
             renderDynamicPane(currentSite);
@@ -1545,7 +1541,6 @@
         renderLogForm();
     }
 
-    // 日誌選單讀取最新的自訂名稱
     function initLogProjectSelect() {
         const projSelect = document.getElementById('log-project-select');
         projSelect.innerHTML = '';
@@ -2147,7 +2142,52 @@ ${tText}
         exportYearlyToExcel();
     }
 
-    initUI();
+    // 1. 網頁開啟時自動從雲端載入最新資料
+    async function autoLoadOnStart() {
+        const syncStatus = document.getElementById('sync-status');
+        if (syncStatus) syncStatus.innerText = "正在自動同步雲端最新資料...";
+        try {
+            let res = await fetch(APPS_SCRIPT_URL);
+            let json = await res.json();
+            if (json && json.data && Object.keys(json.data).length > 0) {
+                appData = json.data;
+                checkDBIntegrity();
+                saveDB();
+                initUI();
+                if (syncStatus) syncStatus.innerText = "已自動同步雲端最新資料！";
+            }
+        } catch (err) {
+            console.warn("自動載入雲端失敗，改用本機快取", err);
+            try {
+                let localData = localStorage.getItem(DB_KEY);
+                if (localData) {
+                    appData = JSON.parse(localData);
+                    checkDBIntegrity();
+                }
+            } catch(e) {}
+            if (syncStatus) syncStatus.innerText = "雲端同步失敗，目前使用本機快取";
+            initUI();
+        }
+    }
+
+    // 啟動自動雲端載入
+    autoLoadOnStart();
+
+    // 2. 每 30 秒自動在背景向雲端檢查有沒有人更新
+    setInterval(async () => {
+        try {
+            let res = await fetch(APPS_SCRIPT_URL);
+            let json = await res.json();
+            if (json && json.data && Object.keys(json.data).length > 0) {
+                appData = json.data;
+                checkDBIntegrity();
+                saveDB();
+                initUI();
+            }
+        } catch (e) {
+            // 背景同步失敗不影響使用者操作
+        }
+    }, 30000);
 </script>
 
 </body>
