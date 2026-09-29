@@ -607,21 +607,26 @@
         }
     }
 
+    // 儲存至雲端：改為標準等待後端確認，不再使用 no-cors 導致假成功
     async function saveToCloud() {
         const syncStatus = document.getElementById('sync-status');
-        if (syncStatus) syncStatus.innerText = "正在儲存至雲端...";
+        if (syncStatus) syncStatus.innerText = "⏳ 正在寫入 Google 試算表與雲端照片總覽...";
         try {
-            await fetch(APPS_SCRIPT_URL, {
+            let res = await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(appData)
             });
-            if (syncStatus) syncStatus.innerText = "已成功同步至雲端！";
-            alert('資料已成功儲存至 Google 試算表！\n照片已同步至雲端硬碟。');
+            let result = await res.json();
+            if (result && result.status === "success") {
+                if (syncStatus) syncStatus.innerText = "已成功寫入 Google 試算表！";
+                alert("✅ 儲存成功！\n\n試算表已成功建立：\n1. 【出工資料總表】（文字總表）\n2. 【施工照片總覽】（分頁2實體照片）");
+            } else {
+                alert("❌ 儲存失敗：" + (result.message || "未知錯誤"));
+            }
         } catch (err) {
-            if (syncStatus) syncStatus.innerText = "儲存失敗";
-            alert('儲存失敗：' + err);
+            if (syncStatus) syncStatus.innerText = "儲存異常";
+            alert("連線或處理失敗：" + err);
         }
     }
 
@@ -645,6 +650,35 @@
             if (syncStatus) syncStatus.innerText = "載入失敗";
             alert('載入失敗：' + err);
         }
+    }
+
+    async function deleteCurrentMonth() {
+        let totalMonths = Object.keys(appData).length;
+        if (totalMonths <= 1) {
+            alert('系統中至少需要保留一個月份的資料，無法刪除！');
+            return;
+        }
+
+        let confirmMsg = `⚠️ 警告：確定要徹底刪除「${currentMonth}」嗎？\n\n此動作將會清除該月份的所有資料！`;
+        if (!confirm(confirmMsg)) return;
+
+        let doubleCheck = prompt(`請輸入「確定刪除」以確認清除 ${currentMonth}：`);
+        if (doubleCheck !== '確定刪除') {
+            alert('已取消刪除。');
+            return;
+        }
+
+        delete appData[currentMonth];
+
+        currentMonth = Object.keys(appData)[0];
+        let monthSites = appData[currentMonth].sites;
+        currentSiteId = monthSites[0] ? monthSites[0].id : '';
+
+        saveDB();
+        initMonthSelect();
+        initUI();
+
+        saveToCloud();
     }
 
     function clearPhotoCache() {
@@ -743,48 +777,6 @@
         initUI();
         saveToCloud();
         alert('已成功刪除該年份並同步雲端！');
-    }
-
-    function deleteCurrentMonth() {
-        let totalMonths = Object.keys(appData).length;
-        if (totalMonths <= 1) {
-            alert('系統中至少需要保留一個月份的資料，無法刪除！');
-            return;
-        }
-
-        let confirmMsg = `⚠️ 警告：確定要徹底刪除「${currentMonth}」嗎？\n\n此動作將會清除該月份的所有資料！`;
-        if (!confirm(confirmMsg)) return;
-
-        let doubleCheck = prompt(`請輸入「確定刪除」以確認清除 ${currentMonth}：`);
-        if (doubleCheck !== '確定刪除') {
-            alert('已取消刪除。');
-            return;
-        }
-
-        delete appData[currentMonth];
-
-        currentMonth = Object.keys(appData)[0];
-        let monthSites = appData[currentMonth].sites;
-        currentSiteId = monthSites[0] ? monthSites[0].id : '';
-
-        saveDB();
-        initMonthSelect();
-        initUI();
-
-        const syncStatus = document.getElementById('sync-status');
-        if (syncStatus) syncStatus.innerText = "正在同步刪除至雲端...";
-        try {
-            fetch(APPS_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(appData)
-            });
-            if (syncStatus) syncStatus.innerText = "雲端資料已同步刪除！";
-            alert(`已成功刪除該月份！`);
-        } catch (err) {
-            alert(`本地已刪除，但雲端同步失敗：${err}`);
-        }
     }
 
     function addNewMonth() {
@@ -1204,7 +1196,6 @@
         initColumnResizer();
     }
 
-    // 點擊查看相片：若本機快取已被清除，自動讀取雲端硬碟的連結直接開啟
     function handlePhotoClick(photoData, photoName, photoUrl, sessionDesc) {
         if (photoData && photoData.startsWith('data:image')) {
             openImageModal(photoData, sessionDesc);
@@ -1408,15 +1399,13 @@
         };
     }
 
-    // 上傳照片時：自動重新命名為「年月日_案場_上下午報班.jpg」
+    // 上傳照片時：自動將檔名重新命名為「年月日_案場_上下午報班.jpg」
     function updateRowPhoto(dayIndex, session, input) {
         if (input.files && input.files[0]) {
             let file = input.files[0];
             let currentSite = appData[currentMonth].sites.find(s => s.id === currentSiteId);
             let siteName = currentSite ? currentSite.name : '工程';
             let dayNum = dayIndex + 1;
-            
-            // 強制命名規格：年月日_案場_上下午報班.jpg
             let formattedName = `${currentMonth}${dayNum}日_${siteName}_${session === 'am' ? '上午' : '下午'}報班.jpg`;
 
             compressImage(file, 650, function(compressedUrl) {
@@ -1430,7 +1419,7 @@
                 }
                 saveDB();
                 updateSingleRowUI(dayIndex);
-                alert(`上傳成功！照片已自動命名為：\n${formattedName}\n\n💡 請記得點擊上方「儲存資料至雲端」以完成雲端相簿寫入！`);
+                alert(`上傳成功！已自動命名為：\n${formattedName}\n\n💡 請記得點擊上方「儲存資料至雲端」以完成雲端相簿寫入！`);
             });
         }
     }
@@ -2026,7 +2015,6 @@ ${tText}
         container.innerHTML = html || '<div style="padding:15px; color:#a0aec0;">尚無施工日誌資料</div>';
     }
 
-    // 核心整合：自動建立「出工明細（分頁1）」與「施工照片總覽（分頁2，內嵌真實照片）」
     async function exportToExcel() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "⏳ 正在處理實體照片嵌入並生成 Excel...";
@@ -2038,7 +2026,6 @@ ${tText}
 
             let allPhotosToEmbed = [];
 
-            // 1. 建立各案場的出工總表分頁
             for (let site of appData[currentMonth].sites) {
                 if (site.isWarrantyRoot) continue;
 
@@ -2053,7 +2040,7 @@ ${tText}
                 let ws = workbook.addWorksheet(safeSheetName);
 
                 ws.addRow([`${currentMonth} - ${displayTitle} 出工總表`]);
-                ws.addRow([`開工日期: ${meta.startDate || '未填'}  |  完工工期: 自動計算  |  工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}  |  展延: ${meta.extension || 0}  |  停工: ${meta.suspensionDate || '無'}  |  復工: ${meta.resumptionDate || '無'}`]);
+                ws.addRow([`開工日期: ${meta.startDate || '未填'}  |  完工工期: 自動計算  |  工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}`]);
                 ws.addRow([]);
                 ws.addRow(['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '上午照片檔名', '下午人數', '下午出工名單', '下午工項', '下午時間', '下午照片檔名', '未出工人員', '備註']);
 
@@ -2069,7 +2056,6 @@ ${tText}
                         unworked, d.note || ''
                     ]);
 
-                    // 收集要放入「分頁2：施工照片總覽」的實體圖片
                     if (d.amPhoto && d.amPhoto.startsWith('data:image')) {
                         allPhotosToEmbed.push({
                             siteName: site.name,
@@ -2095,9 +2081,8 @@ ${tText}
                 ws.columns.forEach(col => { col.width = 16; });
             }
 
-            // 2. 自動建立「分頁2：施工照片總覽」並嵌入真實圖檔
             let photoSheet = workbook.addWorksheet("📷 施工照片總覽");
-            photoSheet.addRow(['項次', '案場名稱', '報班日期', '時段', '施工項目', '照片自訂檔名', '實體施工照片']);
+            photoSheet.addRow(['項次', '案場名稱', '報班日期', '時段', '施工項目', '照片名稱', '實體施工照片']);
             photoSheet.columns = [
                 { width: 8 },
                 { width: 18 },
@@ -2113,10 +2098,10 @@ ${tText}
             } else {
                 for (let i = 0; i < allPhotosToEmbed.length; i++) {
                     let p = allPhotosToEmbed[i];
-                    let rNum = i + 2; // 資料從第 2 行開始
+                    let rNum = i + 2;
                     
                     let row = photoSheet.addRow([i + 1, p.siteName, p.dateStr, p.session, p.project, p.photoName, '']);
-                    row.height = 110; // 設定行高以放置照片
+                    row.height = 110;
 
                     let imageId = workbook.addImage({
                         base64: p.base64,
@@ -2146,10 +2131,8 @@ ${tText}
         alert("日誌總表匯出中...");
     }
 
-    // 優先初始化本機畫面，保證即時呈現
     initUI();
 
-    // 背景載入雲端（具備 6 秒逾時保護機制）
     async function autoLoadOnStart() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "背景同步雲端中...";
@@ -2172,7 +2155,6 @@ ${tText}
             }
         } catch (err) {
             clearTimeout(timeoutId);
-            console.warn("背景同步失敗或逾時：", err);
             if (syncStatus) syncStatus.innerText = "連線逾時，使用本機快取";
         }
     }
