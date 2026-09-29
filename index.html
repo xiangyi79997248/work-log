@@ -299,7 +299,7 @@
 
     <div class="cloud-sync-bar">
         <div>
-            ☁️ <strong>雲端狀態：</strong> <span id="sync-status" style="color: #1b381b;">就緒（每次修改後請點擊儲存）</span>
+            ☁️ <strong>雲端狀態：</strong> <span id="sync-status" style="color: #1b381b;">就緒</span>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn btn-green" onclick="saveToCloud()">☁️ 儲存資料至雲端</button>
@@ -376,31 +376,31 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; margin-bottom: 15px; align-items: start;">
                 <div>
                     <label style="display: block; margin-bottom: 5px;"><strong>上午天氣：</strong></label>
-                    <select id="log-weather-am" onchange="debouncedSaveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
+                    <select id="log-weather-am" onchange="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
                         <option value="晴">晴</option><option value="雨">雨</option><option value="陰">陰</option>
                     </select>
                 </div>
                 <div>
                     <label style="display: block; margin-bottom: 5px;"><strong>下午天氣：</strong></label>
-                    <select id="log-weather-pm" onchange="debouncedSaveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
+                    <select id="log-weather-pm" onchange="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
                         <option value="晴">晴</option><option value="雨">雨</option><option value="陰">陰</option>
                     </select>
                 </div>
                 <div>
                     <label style="display: block; margin-bottom: 5px;"><strong>出工人員：</strong></label>
-                    <input type="text" id="log-workers-summary" oninput="debouncedSaveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px; background-color: #fff; border: 1px solid #cbd5e0; box-sizing: border-box;" placeholder="自動帶入，可修改">
+                    <input type="text" id="log-workers-summary" oninput="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px; background-color: #fff; border: 1px solid #cbd5e0; box-sizing: border-box;" placeholder="自動帶入，可修改">
                 </div>
             </div>
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px;"><strong>今日施工進度⬇️：</strong></label>
-                <textarea id="log-progress" rows="3" onblur="formatProgressOnBlur(this)" oninput="debouncedSaveLogData()" style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;" placeholder="可自由換行打字，移開游標或複製時自動加上藍色數字編號"></textarea>
+                <textarea id="log-progress" rows="3" onblur="formatProgressOnBlur(this)" oninput="saveLogData()" style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;" placeholder="可自由換行打字，移開游標或複製時自動加上藍色數字編號"></textarea>
             </div>
             <h3>📊 各工種出工人數細目：</h3>
             <div class="log-grid" id="log-trades-grid"></div>
             <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr; gap: 12px;">
-                <div><label><strong>施工取樣試驗紀錄：</strong></label><textarea id="log-sampling" rows="2" oninput="debouncedSaveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
-                <div><label><strong>通知協力廠商辦理事項：</strong></label><textarea id="log-notice" rows="2" oninput="debouncedSaveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
-                <div><label><strong>重要事項紀錄：</strong></label><textarea id="log-important" rows="2" oninput="debouncedSaveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>施工取樣試驗紀錄：</strong></label><textarea id="log-sampling" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>通知協力廠商辦理事項：</strong></label><textarea id="log-notice" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>重要事項紀錄：</strong></label><textarea id="log-important" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
             </div>
             <div class="report-section" style="margin-top: 15px;">
                 <h3>📋 完整日誌文字預覽</h3>
@@ -420,7 +420,6 @@
                 <button class="btn btn-teal" style="font-size: 15px; padding: 8px 16px;" onclick="exportLogSummaryToExcel()">📋 匯出每日詳細施工日誌總表</button>
             </div>
 
-            <!-- 總表案場切換列 -->
             <div style="background:#edf2f7; padding:12px 15px; border-radius:8px; margin: 15px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <strong style="color:#2d3748; font-size:14px;">🏢 選擇檢視案場：</strong>
                 <div id="export-site-filter-container" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
@@ -454,6 +453,7 @@
 
     function sortSelectedWorkersBySiteMaster(selectedList, siteMasterWorkers) {
         if (!selectedList || selectedList.length === 0) return [];
+        if (!siteMasterWorkers) return selectedList;
         return siteMasterWorkers.filter(w => selectedList.includes(w));
     }
 
@@ -528,29 +528,37 @@
 
     let appData;
     try {
-        appData = JSON.parse(localStorage.getItem(DB_KEY)) || getInitialDB();
+        let stored = localStorage.getItem(DB_KEY);
+        appData = stored ? JSON.parse(stored) : getInitialDB();
     } catch (e) {
         appData = getInitialDB();
     }
 
     function checkDBIntegrity() {
+        if (!appData || typeof appData !== 'object' || Object.keys(appData).length === 0) {
+            appData = getInitialDB();
+        }
         Object.keys(appData).forEach(m => {
-            if (!appData[m].sites) appData[m].sites = [];
+            if (!appData[m] || typeof appData[m] !== 'object') {
+                appData[m] = { sites: [], data: {}, logs: {}, meta: {}, customSiteNames: {}, warrantySubSites: {} };
+            }
+            if (!Array.isArray(appData[m].sites)) appData[m].sites = [];
             if (!appData[m].sites.some(s => s.id === 'warranty_pool')) {
                 appData[m].sites.push({ id: 'warranty_pool', name: '保固中案場', title: '保固中各維修案場管理', isWarrantyRoot: true, fixed: true });
             }
             if (!appData[m].customSiteNames) appData[m].customSiteNames = {};
             appData[m].sites.forEach(s => {
                 if (!s.isWarrantyRoot && !appData[m].customSiteNames[s.id]) {
-                    appData[m].customSiteNames[s.id] = s.title;
+                    appData[m].customSiteNames[s.id] = s.title || s.name;
                 }
             });
+            if (!appData[m].data) appData[m].data = {};
             if (!appData[m].logs) appData[m].logs = {};
             Object.keys(appData[m].logs).forEach(sId => {
                 let sLogs = appData[m].logs[sId];
                 if (sLogs) {
                     Object.keys(sLogs).forEach(dIdx => {
-                        if (!sLogs[dIdx].customTrades) {
+                        if (sLogs[dIdx] && !sLogs[dIdx].customTrades) {
                             sLogs[dIdx].customTrades = [
                                 { name: "自訂工1", val: "" },
                                 { name: "自訂工2", val: "" },
@@ -569,66 +577,52 @@
     checkDBIntegrity();
 
     let currentMonth = Object.keys(appData)[0] || '115年9月';
-    let currentSiteId = appData[currentMonth].sites[0].id;
+    let currentSiteId = (appData[currentMonth] && appData[currentMonth].sites && appData[currentMonth].sites[0]) ? appData[currentMonth].sites[0].id : 'qigu';
 
     function saveDB() {
         try {
             localStorage.setItem(DB_KEY, JSON.stringify(appData));
         } catch (e) {
-            console.warn("本機快取空間已滿，改由雲端儲存保護");
+            console.warn("本機快取寫入失敗或空間已滿");
         }
     }
 
-    // 關鍵優化 1：剔除 Base64 巨大照片，將幾 MB 降至 20KB，雲端上傳 1 秒完成
     async function saveToCloud() {
         const syncStatus = document.getElementById('sync-status');
-        syncStatus.innerText = "正在儲存至雲端...";
+        if (syncStatus) syncStatus.innerText = "正在儲存至雲端...";
         try {
-            const cleanData = JSON.parse(JSON.stringify(appData, (key, value) => {
-                if ((key === 'amPhoto' || key === 'pmPhoto') && value && typeof value === 'string' && value.startsWith('data:image')) {
-                    return ''; // 避免照片塞爆 Apps Script 超時卡死
-                }
-                return value;
-            }));
-
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(cleanData)
+                body: JSON.stringify(appData)
             });
-            syncStatus.innerText = "已成功同步至雲端！";
+            if (syncStatus) syncStatus.innerText = "已成功同步至雲端！";
             alert('資料已成功儲存至 Google 試算表！');
         } catch (err) {
-            syncStatus.innerText = "儲存失敗";
+            if (syncStatus) syncStatus.innerText = "儲存失敗";
             alert('儲存失敗：' + err);
         }
     }
 
-    // 關鍵優化 2：加入超時防護，防止 Google 試算表連線卡死瀏覽器
     async function loadFromCloud() {
         const syncStatus = document.getElementById('sync-status');
-        syncStatus.innerText = "正在從雲端載入...";
+        if (syncStatus) syncStatus.innerText = "正在從雲端載入...";
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 9000);
-
-            let res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
+            let res = await fetch(APPS_SCRIPT_URL);
             let json = await res.json();
             if (json && json.data && Object.keys(json.data).length > 0) {
                 appData = json.data;
                 checkDBIntegrity();
                 saveDB();
                 initUI();
-                syncStatus.innerText = "已從雲端載入最新資料！";
+                if (syncStatus) syncStatus.innerText = "已從雲端載入最新資料！";
                 alert('已成功從雲端同步最新資料！');
             } else {
                 alert('雲端目前尚無資料');
             }
         } catch (err) {
-            syncStatus.innerText = "載入失敗";
+            if (syncStatus) syncStatus.innerText = "載入失敗";
             alert('載入失敗：' + err);
         }
     }
@@ -640,7 +634,7 @@
             return;
         }
 
-        let confirmMsg = `⚠️ 警告：確定要徹底刪除「${currentMonth}」嗎？\n\n此動作將會【同步清除 Google 試算表】中該月份的所有出工與日誌資料，且無法復原！`;
+        let confirmMsg = `⚠️ 警告：確定要徹底刪除「${currentMonth}」嗎？\n\n此動作將會清除該月份的所有資料！`;
         if (!confirm(confirmMsg)) return;
 
         let doubleCheck = prompt(`請輸入「確定刪除」以確認清除 ${currentMonth}：`);
@@ -653,14 +647,14 @@
 
         currentMonth = Object.keys(appData)[0];
         let monthSites = appData[currentMonth].sites;
-        currentSiteId = monthSites[0].id;
+        currentSiteId = monthSites[0] ? monthSites[0].id : '';
 
         saveDB();
         initMonthSelect();
         initUI();
 
         const syncStatus = document.getElementById('sync-status');
-        syncStatus.innerText = "正在同步刪除至雲端...";
+        if (syncStatus) syncStatus.innerText = "正在同步刪除至雲端...";
         try {
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
@@ -668,8 +662,8 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(appData)
             });
-            syncStatus.innerText = "雲端資料已同步刪除！";
-            alert(`已成功刪除該月份，並已同步清空 Google 試算表對應資料！`);
+            if (syncStatus) syncStatus.innerText = "雲端資料已同步刪除！";
+            alert(`已成功刪除該月份！`);
         } catch (err) {
             alert(`本地已刪除，但雲端同步失敗：${err}`);
         }
@@ -688,7 +682,7 @@
         let westernYear = parseInt(yearMatch[1]) + 1911;
         let month = parseInt(monthMatch[1]) - 1;
         let dateObj = new Date(westernYear, month, dayIndex);
-        return ["禮拜日", "禮拜一", "禮拜二", "禮拜三", "禮拜四", "禮拜五", "禮拜六"][dateObj.getDay()];
+        return ["禮拜日", "禮拜一", "禮拜二", "禮拜三", "禮拜四", "禮拜五", "禮拜六"][dateObj.getDay()] || "禮拜一";
     }
 
     function parseYearAndMonth(monthKey) {
@@ -702,6 +696,7 @@
     function initMonthSelect() {
         const yearSelect = document.getElementById('year-select');
         const monthSelect = document.getElementById('month-select');
+        if (!yearSelect || !monthSelect) return;
         
         let years = Array.from(new Set(Object.keys(appData).map(k => parseYearAndMonth(k).year)));
         years.sort();
@@ -741,9 +736,9 @@
         let targetKey = curInfo.year + (month.includes('月') ? month : (month + '月'));
         if (appData[targetKey]) {
             currentMonth = targetKey;
-            let monthSites = appData[currentMonth].sites;
+            let monthSites = appData[currentMonth].sites || [];
             if (!['report_tab', 'log_tab', 'export_tab'].includes(currentSiteId) && !monthSites.some(s => s.id === currentSiteId)) {
-                currentSiteId = monthSites[0].id;
+                currentSiteId = monthSites[0] ? monthSites[0].id : '';
             }
             initUI();
         }
@@ -764,7 +759,7 @@
         keysInYear.forEach(k => delete appData[k]);
         currentMonth = Object.keys(appData)[0];
         let monthSites = appData[currentMonth].sites;
-        currentSiteId = monthSites[0].id;
+        currentSiteId = monthSites[0] ? monthSites[0].id : '';
         saveDB();
         initMonthSelect();
         initUI();
@@ -937,56 +932,62 @@
     }
 
     function initUI() {
-        initMonthSelect(); initTabs();
+        if (!appData[currentMonth]) {
+            currentMonth = Object.keys(appData)[0] || '115年9月';
+        }
+        initMonthSelect(); 
+        initTabs();
+
         const reportPane = document.getElementById('report-content-pane');
         const logPane = document.getElementById('log-content-pane');
         const exportPane = document.getElementById('export-content-pane');
         const dynamicArea = document.getElementById('dynamic-content-area');
         
-        reportPane.style.display = 'none'; 
-        logPane.style.display = 'none'; 
-        exportPane.style.display = 'none'; 
-        dynamicArea.style.display = 'none';
+        if (reportPane) reportPane.style.display = 'none'; 
+        if (logPane) logPane.style.display = 'none'; 
+        if (exportPane) exportPane.style.display = 'none'; 
+        if (dynamicArea) dynamicArea.style.display = 'none';
 
         const mainTitle = document.getElementById('main-title');
-        let monthSites = appData[currentMonth].sites;
+        let monthSites = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
 
         if (currentSiteId === 'report_tab') {
-            reportPane.style.display = 'block';
-            mainTitle.innerText = `📋 每日回報總覽`;
+            if (reportPane) reportPane.style.display = 'block';
+            if (mainTitle) mainTitle.innerText = `📋 每日回報總覽`;
             initReportPane();
         } else if (currentSiteId === 'log_tab') {
-            logPane.style.display = 'block';
-            mainTitle.innerText = "📝 每日詳細施工日誌填報";
+            if (logPane) logPane.style.display = 'block';
+            if (mainTitle) mainTitle.innerText = "📝 每日詳細施工日誌填報";
             initLogPane();
         } else if (currentSiteId === 'export_tab') {
-            exportPane.style.display = 'block';
-            mainTitle.innerText = "📊 全案場 Excel 總表匯出";
+            if (exportPane) exportPane.style.display = 'block';
+            if (mainTitle) mainTitle.innerText = "📊 全案場 Excel 總表匯出";
             renderExportSiteFilters();
             renderExportPreview();
         } else {
-            dynamicArea.style.display = 'block';
+            if (dynamicArea) dynamicArea.style.display = 'block';
             let currentSite = monthSites.find(s => s.id === currentSiteId) || monthSites[0];
-            currentSiteId = currentSite.id;
-            
-            let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[currentSite.id]) || currentSite.title || currentSite.name;
-            mainTitle.innerText = displayTitle;
-            renderDynamicPane(currentSite);
+            if (currentSite) {
+                currentSiteId = currentSite.id;
+                let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[currentSite.id]) || currentSite.title || currentSite.name;
+                if (mainTitle) mainTitle.innerText = displayTitle;
+                renderDynamicPane(currentSite);
+            }
         }
     }
 
     function initTabs() {
         const tabsContainer = document.getElementById('site-tabs');
+        if (!tabsContainer) return;
         tabsContainer.innerHTML = '';
-        let monthSites = appData[currentMonth].sites;
+        let monthSites = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
 
         monthSites.forEach(site => {
             const btn = document.createElement('button');
-            if (site.isWarrantyRoot) {
-                btn.className = `tab-btn warranty-tab ${site.id === currentSiteId ? 'active' : ''}`;
-            } else {
-                btn.className = `tab-btn ${site.id === currentSiteId ? 'active' : ''}`;
-            }
+            btn.className = site.isWarrantyRoot 
+                ? `tab-btn warranty-tab ${site.id === currentSiteId ? 'active' : ''}` 
+                : `tab-btn ${site.id === currentSiteId ? 'active' : ''}`;
+            
             let spanName = document.createElement('span');
             spanName.innerText = site.name;
             spanName.onclick = () => { currentSiteId = site.id; initUI(); };
@@ -1029,8 +1030,9 @@
 
     function renderDynamicPane(siteObj) {
         const area = document.getElementById('dynamic-content-area');
+        if (!area || !siteObj) return;
         
-        if (siteObj && siteObj.isWarrantyRoot) {
+        if (siteObj.isWarrantyRoot) {
             if (!appData[currentMonth].warrantySubSites) appData[currentMonth].warrantySubSites = {};
             if (!appData[currentMonth].warrantySubSites[currentSiteId]) {
                 appData[currentMonth].warrantySubSites[currentSiteId] = [];
@@ -1084,7 +1086,7 @@
             return;
         }
 
-        let siteData = appData[currentMonth].data[currentSiteId];
+        let siteData = (appData[currentMonth].data && appData[currentMonth].data[currentSiteId]) ? appData[currentMonth].data[currentSiteId] : { workers: [...defaultWorkers], days: [] };
         if (!appData[currentMonth].meta) appData[currentMonth].meta = {};
         if (!appData[currentMonth].meta[currentSiteId]) {
             appData[currentMonth].meta[currentSiteId] = { startDate: '', duration: 0, durationType: '日曆天', extension: 0, suspensionDate: '', resumptionDate: '' };
@@ -1092,7 +1094,7 @@
         let meta = appData[currentMonth].meta[currentSiteId];
         
         if (!appData[currentMonth].customSiteNames) appData[currentMonth].customSiteNames = {};
-        let currentCustomName = appData[currentMonth].customSiteNames[currentSiteId] !== undefined ? appData[currentMonth].customSiteNames[currentSiteId] : siteObj.title;
+        let currentCustomName = appData[currentMonth].customSiteNames[currentSiteId] !== undefined ? appData[currentMonth].customSiteNames[currentSiteId] : (siteObj.title || siteObj.name);
 
         let html = `
             <div style="font-size: 15px; font-weight: bold; color: #1e331e; margin-bottom: 12px; background: #b6d7a8; padding: 10px 15px; border-radius: 6px; border: 1px solid #93c47d; display: flex; align-items: center; gap: 10px;">
@@ -1137,7 +1139,7 @@
 
             <div class="config-area">
                 <label><strong>此工地可用工班/人員名單（用逗號分隔）：</strong></label>
-                <input type="text" id="worker-list-input" value="${siteData.workers.join(', ')}" placeholder="例如: 盧明君, 林智宇, 吳炫德, 邱龍展">
+                <input type="text" id="worker-list-input" value="${(siteData.workers || []).join(', ')}" placeholder="例如: 盧明君, 林智宇, 吳炫德, 邱龍展">
                 <button class="btn" style="background-color: #3182ce; color: white;" onclick="updateWorkerList()">更新名單</button>
                 <span style="color: #112611; font-size: 13px; margin-left: 15px;">💡 提示：填寫完畢請點擊上方「儲存資料至雲端」進行同步！</span>
             </div>
@@ -1169,29 +1171,33 @@
         calculateProjectMetaValues(meta);
 
         const tbody = document.getElementById('table-body');
-        siteData.days.forEach((row, index) => {
-            let sortedWorkers = [...siteData.workers];
-            let unworkedWorkers = siteData.workers.filter(w => !row.amWorkers.includes(w) && !row.pmWorkers.includes(w));
-            let tr = document.createElement('tr');
-            tr.innerHTML = getRowHTML(row, index, sortedWorkers, unworkedWorkers);
-            tbody.appendChild(tr);
-        });
+        if (siteData.days) {
+            siteData.days.forEach((row, index) => {
+                let sortedWorkers = [...(siteData.workers || [])];
+                let unworkedWorkers = (siteData.workers || []).filter(w => !(row.amWorkers || []).includes(w) && !(row.pmWorkers || []).includes(w));
+                let tr = document.createElement('tr');
+                tr.innerHTML = getRowHTML(row, index, sortedWorkers, unworkedWorkers);
+                tbody.appendChild(tr);
+            });
+        }
 
         initColumnResizer();
     }
 
     function getRowHTML(row, index, sortedWorkers, unworkedWorkers) {
+        let amList = row.amWorkers || [];
+        let pmList = row.pmWorkers || [];
         return `
             <td style="color: #1a202c; font-weight: bold;">${row.dayIndex}</td>
             <td><strong style="white-space: nowrap;">${currentMonth}${row.dateStr}</strong></td>
-            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.amWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'am', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
+            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${amList.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'am', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
             <td><textarea class="resizable-box" oninput="updateField(${index}, 'amProject', this.value)">${row.amProject || ''}</textarea></td>
             <td><input type="time" value="${row.amTime || ''}" onchange="updateField(${index}, 'amTime', this.value)" style="width: 80px; padding: 4px; font-size: 12px;"></td>
             <td>
                 <input type="file" accept="image/*" onchange="updateRowPhoto(${index}, 'am', this)" style="font-size: 10px; width: 110px; margin-bottom: 2px;">
                 ${row.amPhoto ? `<div style="display:flex; align-items:center; justify-content:center; gap:4px;"><a href="javascript:void(0)" onclick="openImageModal('${row.amPhoto}', '上午工項: ${row.amProject || '無'}')" style="font-size: 11px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75px;">${row.amPhotoName}</a><button class="btn btn-sm" style="background:#e53e3e; color:#fff; padding:1px 4px; font-size:10px;" onclick="deleteRowPhoto(${index}, 'am')">❌</button></div>` : `<div style="font-size: 10px; color: #2b6cb0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 105px;">${row.amPhotoName || ''}</div>`}
             </td>
-            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${row.pmWorkers.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'pm', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
+            <td><div class="worker-selector">${sortedWorkers.map(w => `<label class="worker-badge"><input type="checkbox" value="${w}" ${pmList.includes(w) ? 'checked' : ''} onchange="updateWorker(${index}, 'pm', '${w}', this.checked)">${w}</label>`).join('')}</div></td>
             <td><textarea class="resizable-box" oninput="updateField(${index}, 'pmProject', this.value)">${row.pmProject || ''}</textarea></td>
             <td><input type="time" value="${row.pmTime || ''}" onchange="updateField(${index}, 'pmTime', this.value)" style="width: 80px; padding: 4px; font-size: 12px;"></td>
             <td>
@@ -1207,13 +1213,15 @@
         let modal = document.getElementById('image-modal');
         let img = document.getElementById('modal-img');
         let caption = document.getElementById('modal-caption');
+        if (!modal || !img || !caption) return;
         img.src = dataUrl;
         caption.innerText = captionText;
         modal.style.display = 'flex';
     }
 
     function closeImageModal() {
-        document.getElementById('image-modal').style.display = 'none';
+        let modal = document.getElementById('image-modal');
+        if (modal) modal.style.display = 'none';
     }
 
     function deleteRowPhoto(dayIndex, session) {
@@ -1338,9 +1346,9 @@
                 canvas.height = height;
                 let ctx = canvas.getContext("2d");
                 ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'medium';
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, width, height);
-                let compressedDataUrl = canvas.toDataURL("image/jpeg", 0.4);
+                let compressedDataUrl = canvas.toDataURL("image/jpeg", 0.55);
                 callback(compressedDataUrl);
             };
         };
@@ -1349,7 +1357,7 @@
     function updateRowPhoto(dayIndex, session, input) {
         if (input.files && input.files[0]) {
             let file = input.files[0];
-            compressImage(file, 450, function(compressedUrl) {
+            compressImage(file, 650, function(compressedUrl) {
                 let siteData = appData[currentMonth].data[currentSiteId];
                 if (session === 'am') {
                     siteData.days[dayIndex].amPhoto = compressedUrl;
@@ -1396,6 +1404,8 @@
     function updateWorker(dayIndex, type, workerName, isChecked) {
         let siteData = appData[currentMonth].data[currentSiteId];
         let dayData = siteData.days[dayIndex];
+        if (!dayData.amWorkers) dayData.amWorkers = [];
+        if (!dayData.pmWorkers) dayData.pmWorkers = [];
         let targetList = type === 'am' ? dayData.amWorkers : dayData.pmWorkers;
         if (isChecked) { if (!targetList.includes(workerName)) targetList.push(workerName); }
         else { let idx = targetList.indexOf(workerName); if (idx > -1) targetList.splice(idx, 1); }
@@ -1405,6 +1415,7 @@
 
     function updateSingleRowUI(dayIndex) {
         let siteData = appData[currentMonth].data[currentSiteId];
+        if (!siteData || !siteData.days) return;
         let row = siteData.days[dayIndex];
         let tbody = document.getElementById('table-body');
         if (!tbody || !tbody.rows[dayIndex]) {
@@ -1412,15 +1423,17 @@
             return;
         }
 
-        let sortedWorkers = [...siteData.workers];
-        let unworkedWorkers = siteData.workers.filter(w => !row.amWorkers.includes(w) && !row.pmWorkers.includes(w));
+        let sortedWorkers = [...(siteData.workers || [])];
+        let unworkedWorkers = (siteData.workers || []).filter(w => !(row.amWorkers || []).includes(w) && !(row.pmWorkers || []).includes(w));
         let tr = tbody.rows[dayIndex];
         tr.innerHTML = getRowHTML(row, dayIndex, sortedWorkers, unworkedWorkers);
     }
 
     function updateField(dayIndex, fieldName, value) {
-        appData[currentMonth].data[currentSiteId].days[dayIndex][fieldName] = value;
-        saveDB();
+        if (appData[currentMonth].data[currentSiteId] && appData[currentMonth].data[currentSiteId].days[dayIndex]) {
+            appData[currentMonth].data[currentSiteId].days[dayIndex][fieldName] = value;
+            saveDB();
+        }
     }
 
     function updateWorkerList() {
@@ -1431,8 +1444,11 @@
 
     function initReportPane() {
         const select = document.getElementById('report-date-select');
-        let firstActiveSite = appData[currentMonth].sites.find(s => !s.isWarrantyRoot) || appData[currentMonth].sites[0];
-        let siteData = appData[currentMonth].data[firstActiveSite.id];
+        if (!select) return;
+        let monthSites = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
+        let firstActiveSite = monthSites.find(s => !s.isWarrantyRoot) || monthSites[0];
+        if (!firstActiveSite) return;
+        let siteData = appData[currentMonth].data ? appData[currentMonth].data[firstActiveSite.id] : null;
         select.innerHTML = '';
         if (siteData && siteData.days) {
             siteData.days.forEach((day, index) => {
@@ -1460,13 +1476,16 @@
     }
 
     function generateReport() {
-        let selectIndex = document.getElementById('report-date-select').value;
-        if (selectIndex === undefined) return;
-        let monthSites = appData[currentMonth].sites;
-        let monthDataObj = appData[currentMonth].data;
+        let select = document.getElementById('report-date-select');
+        if (!select) return;
+        let selectIndex = select.value;
+        if (selectIndex === undefined || selectIndex === '') return;
+        let monthSites = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
+        let monthDataObj = appData[currentMonth].data || {};
         let firstActiveSite = monthSites.find(s => !s.isWarrantyRoot);
         if (!firstActiveSite || !monthDataObj[firstActiveSite.id]) return;
         let dayData = monthDataObj[firstActiveSite.id].days[selectIndex];
+        if (!dayData) return;
         let fullDateStr = `${currentMonth}${dayData.dateStr}`;
 
         let activeSitesAm = [];
@@ -1475,32 +1494,36 @@
         monthSites.forEach(site => {
             if (site.isWarrantyRoot) return;
             let sData = monthDataObj[site.id];
-            if (!sData) return;
+            if (!sData || !sData.days || !sData.days[selectIndex]) return;
             let dData = sData.days[selectIndex];
             
-            let hasAm = dData.amWorkers.length > 0 || (dData.amProject && dData.amProject.trim() !== '');
-            let hasPm = dData.pmWorkers.length > 0 || (dData.pmProject && dData.pmProject.trim() !== '');
+            let hasAm = (dData.amWorkers && dData.amWorkers.length > 0) || (dData.amProject && dData.amProject.trim() !== '');
+            let hasPm = (dData.pmWorkers && dData.pmWorkers.length > 0) || (dData.pmProject && dData.pmProject.trim() !== '');
 
             if (hasAm) activeSitesAm.push({ site, dData });
             if (hasPm) activeSitesPm.push({ site, dData });
         });
 
         let allActiveNames = Array.from(new Set([...activeSitesAm.map(i => i.site.name), ...activeSitesPm.map(i => i.site.name)]));
-        document.getElementById('detected-sites-tag').innerText = allActiveNames.length > 0 ? allActiveNames.join('、') : "（尚無紀錄）";
+        let detectedTag = document.getElementById('detected-sites-tag');
+        if (detectedTag) detectedTag.innerText = allActiveNames.length > 0 ? allActiveNames.join('、') : "（尚無紀錄）";
+
+        let reportBox = document.getElementById('report-output');
+        if (!reportBox) return;
 
         if (activeSitesAm.length === 0 && activeSitesPm.length === 0) {
-            document.getElementById('report-output').innerText = "當日無任何案場有出工紀錄。";
+            reportBox.innerText = "當日無任何案場有出工紀錄。";
             return;
         }
 
         let amR = [];
         activeSitesAm.forEach(({ site, dData }) => {
-            let sWorkers = appData[currentMonth].data[site.id].workers;
+            let sWorkers = (appData[currentMonth].data[site.id] && appData[currentMonth].data[site.id].workers) || [];
             let sortedAmWorkers = sortSelectedWorkersBySiteMaster(dData.amWorkers, sWorkers);
             let amStr = sortedAmWorkers.length > 0 ? sortedAmWorkers.join('、') : '無';
-            let unworked = sWorkers.filter(w => !dData.amWorkers.includes(w) && !dData.pmWorkers.includes(w)).join('、') || '無';
+            let unworked = sWorkers.filter(w => !(dData.amWorkers || []).includes(w) && !(dData.pmWorkers || []).includes(w)).join('、') || '無';
             amR.push(
-`上午出工：共${dData.amWorkers.length}人（${amStr}），未出工：${unworked}
+`上午出工：共${(dData.amWorkers || []).length}人（${amStr}），未出工：${unworked}
 案場：${site.name}
 項目：${dData.amProject || '無'} (時間: ${dData.amTime || '未填'})`
             );
@@ -1508,12 +1531,12 @@
 
         let pmR = [];
         activeSitesPm.forEach(({ site, dData }) => {
-            let sWorkers = appData[currentMonth].data[site.id].workers;
+            let sWorkers = (appData[currentMonth].data[site.id] && appData[currentMonth].data[site.id].workers) || [];
             let sortedPmWorkers = sortSelectedWorkersBySiteMaster(dData.pmWorkers, sWorkers);
             let pmStr = sortedPmWorkers.length > 0 ? sortedPmWorkers.join('、') : '無';
-            let unworked = sWorkers.filter(w => !dData.amWorkers.includes(w) && !dData.pmWorkers.includes(w)).join('、') || '無';
+            let unworked = sWorkers.filter(w => !(dData.amWorkers || []).includes(w) && !(dData.pmWorkers || []).includes(w)).join('、') || '無';
             pmR.push(
-`下午出工：共${dData.pmWorkers.length}人（${pmStr}），未出工：${unworked}
+`下午出工：共${(dData.pmWorkers || []).length}人（${pmStr}），未出工：${unworked}
 案場：${site.name}
 項目：${dData.pmProject || '無'} (時間: ${dData.pmTime || '未填'})`
             );
@@ -1528,7 +1551,7 @@
             reportText += `${fullDateStr}，下午：\n----------------------------------------\n` + pmR.join('\n\n');
         }
 
-        document.getElementById('report-output').innerText = reportText;
+        reportBox.innerText = reportText;
     }
 
     function copyReport() {
@@ -1537,6 +1560,7 @@
 
     function initLogPane() {
         const select = document.getElementById('log-date-select');
+        if (!select) return;
         select.innerHTML = '';
         for (let i = 1; i <= 30; i++) { select.add(new Option(`${i}日`, i)); }
 
@@ -1548,7 +1572,7 @@
         if (targetMonthStr === currentMonth && tDay >= 1 && tDay <= 30) {
             select.value = tDay;
         } else {
-            select.value = 7;
+            select.value = 1;
         }
 
         initLogProjectSelect();
@@ -1557,8 +1581,10 @@
 
     function initLogProjectSelect() {
         const projSelect = document.getElementById('log-project-select');
+        if (!projSelect) return;
         projSelect.innerHTML = '';
-        appData[currentMonth].sites.forEach(s => {
+        let monthSites = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
+        monthSites.forEach(s => {
             if (!s.isWarrantyRoot) {
                 let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[s.id]) || s.title || s.name;
                 projSelect.add(new Option(displayTitle, s.id));
@@ -1573,9 +1599,13 @@
     function onLogProjectChange() { renderLogForm(); }
 
     function renderLogForm() {
-        let dayIndex = parseInt(document.getElementById('log-date-select').value);
-        let siteId = document.getElementById('log-project-select').value;
+        let dateSelect = document.getElementById('log-date-select');
+        let projSelect = document.getElementById('log-project-select');
+        if (!dateSelect || !projSelect) return;
+        let dayIndex = parseInt(dateSelect.value);
+        let siteId = projSelect.value;
         if (!siteId) return;
+        if (!appData[currentMonth].logs) appData[currentMonth].logs = {};
         if (!appData[currentMonth].logs[siteId]) appData[currentMonth].logs[siteId] = {};
         if (!appData[currentMonth].logs[siteId][dayIndex]) {
             appData[currentMonth].logs[siteId][dayIndex] = { 
@@ -1610,11 +1640,13 @@
         document.getElementById('log-notice').value = log.notice || "";
         document.getElementById('log-important').value = log.important || "";
 
-        if (!log.workersSummary && appData[currentMonth].data[siteId]) {
+        if (!log.workersSummary && appData[currentMonth].data && appData[currentMonth].data[siteId] && appData[currentMonth].data[siteId].days) {
             let sW = appData[currentMonth].data[siteId].days[dayIndex - 1];
-            let masterWorkers = appData[currentMonth].data[siteId].workers;
-            let combinedWorkers = Array.from(new Set([...sW.amWorkers, ...sW.pmWorkers]));
-            log.workersSummary = sortSelectedWorkersBySiteMaster(combinedWorkers, masterWorkers).join('、');
+            if (sW) {
+                let masterWorkers = appData[currentMonth].data[siteId].workers || [];
+                let combinedWorkers = Array.from(new Set([...(sW.amWorkers || []), ...(sW.pmWorkers || [])]));
+                log.workersSummary = sortSelectedWorkersBySiteMaster(combinedWorkers, masterWorkers).join('、');
+            }
         }
         document.getElementById('log-workers-summary').value = log.workersSummary || '';
 
@@ -1642,30 +1674,21 @@
         let siteId = document.getElementById('log-project-select').value;
         if (!appData[currentMonth].logs[siteId][dayIndex].trades) appData[currentMonth].logs[siteId][dayIndex].trades = {};
         appData[currentMonth].logs[siteId][dayIndex].trades[t] = val;
-        debouncedSaveLogData();
+        saveDB(); generateLogText();
     }
 
     function updateCustomTradeName(idx, val) {
         let dayIndex = parseInt(document.getElementById('log-date-select').value);
         let siteId = document.getElementById('log-project-select').value;
         appData[currentMonth].logs[siteId][dayIndex].customTrades[idx].name = val;
-        debouncedSaveLogData();
+        saveDB(); generateLogText();
     }
 
     function updateCustomTradeVal(idx, val) {
         let dayIndex = parseInt(document.getElementById('log-date-select').value);
         let siteId = document.getElementById('log-project-select').value;
         appData[currentMonth].logs[siteId][dayIndex].customTrades[idx].val = val;
-        debouncedSaveLogData();
-    }
-
-    // 關鍵優化 3：打字防抖，停止打字 300ms 後才統一處理，消除打字遲鈍感
-    let saveLogTimer = null;
-    function debouncedSaveLogData() {
-        clearTimeout(saveLogTimer);
-        saveLogTimer = setTimeout(() => {
-            saveLogData();
-        }, 300);
+        saveDB(); generateLogText();
     }
 
     function saveLogData() {
@@ -1680,8 +1703,7 @@
         log.sampling = document.getElementById('log-sampling').value;
         log.notice = document.getElementById('log-notice').value;
         log.important = document.getElementById('log-important').value;
-        saveDB(); 
-        generateLogText();
+        saveDB(); generateLogText();
     }
 
     function formatProgressOnBlur(textarea) {
@@ -1705,9 +1727,9 @@
         let siteId = document.getElementById('log-project-select').value;
         if (!siteId) return;
         let log = appData[currentMonth].logs[siteId][dayIndex];
-        let pTitle = document.getElementById('log-project-select').selectedOptions[0].text;
+        let pTitle = document.getElementById('log-project-select').selectedOptions[0] ? document.getElementById('log-project-select').selectedOptions[0].text : '';
         
-        let tTextArr = tradeList.map(t => `${t}-${log.trades && log.trades[t] || ''}人`);
+        let tTextArr = tradeList.map(t => `${t}-${(log.trades && log.trades[t]) || ''}人`);
         if (log.customTrades) {
             log.customTrades.forEach(ct => {
                 let cVal = ct.val ? ct.val.trim() : '';
@@ -1759,7 +1781,7 @@ ${tText}
         if (!container) return;
         container.innerHTML = '';
 
-        let sites = appData[currentMonth].sites;
+        let sites = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
 
         let allBtn = document.createElement('button');
         allBtn.className = `site-filter-btn ${currentExportFilterSiteId === 'ALL' ? 'active' : ''}`;
@@ -1778,9 +1800,10 @@ ${tText}
 
     function renderExportPreview() {
         let container = document.getElementById('export-preview-table');
+        if (!container) return;
         let html = '';
         
-        let sitesToRender = appData[currentMonth].sites;
+        let sitesToRender = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
         if (currentExportFilterSiteId !== 'ALL') {
             sitesToRender = sitesToRender.filter(s => s.id === currentExportFilterSiteId);
         }
@@ -1835,20 +1858,20 @@ ${tText}
                 <th style="width:110px;">備註</th>
             </tr></thead><tbody>`;
 
-            sData.days.forEach(d => {
+            (sData.days || []).forEach(d => {
                 let sortedAmWorkers = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
                 let sortedPmWorkers = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
-                let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+                let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
                 let amPhotoThumb = d.amPhoto ? `<img src="${d.amPhoto}" style="max-height:36px; max-width:80px; object-fit:contain; border-radius:4px; border:1px solid #ccc; cursor:pointer;" onclick="openImageModal('${d.amPhoto}', '上午工項: ${d.amProject || ''}')">` : '<span style="color:#cbd5e0;">無</span>';
                 let pmPhotoThumb = d.pmPhoto ? `<img src="${d.pmPhoto}" style="max-height:36px; max-width:80px; object-fit:contain; border-radius:4px; border:1px solid #ccc; cursor:pointer;" onclick="openImageModal('${d.pmPhoto}', '下午工項: ${d.pmProject || ''}')">` : '<span style="color:#cbd5e0;">無</span>';
 
                 html += `<tr>
                     <td>${currentMonth}${d.dateStr}</td>
-                    <td>${d.amWorkers.length}人</td>
+                    <td>${(d.amWorkers || []).length}人</td>
                     <td style="text-align:left;">${sortedAmWorkers.join('、') || '無'}</td>
                     <td style="text-align:left;">${d.amProject || ''}</td>
                     <td>${amPhotoThumb}</td>
-                    <td>${d.pmWorkers.length}人</td>
+                    <td>${(d.pmWorkers || []).length}人</td>
                     <td style="text-align:left;">${sortedPmWorkers.join('、') || '無'}</td>
                     <td style="text-align:left;">${d.pmProject || ''}</td>
                     <td>${pmPhotoThumb}</td>
@@ -1865,16 +1888,17 @@ ${tText}
 
     function renderLogSummaryPreview() {
         let container = document.getElementById('log-summary-preview-table');
+        if (!container) return;
         let html = '';
 
-        let sitesToRender = appData[currentMonth].sites;
+        let sitesToRender = (appData[currentMonth] && appData[currentMonth].sites) ? appData[currentMonth].sites : [];
         if (currentExportFilterSiteId !== 'ALL') {
             sitesToRender = sitesToRender.filter(s => s.id === currentExportFilterSiteId);
         }
 
         sitesToRender.forEach(site => {
             if (site.isWarrantyRoot) return;
-            let siteLogs = appData[currentMonth].logs[site.id];
+            let siteLogs = appData[currentMonth].logs ? appData[currentMonth].logs[site.id] : null;
             if (!siteLogs) return;
 
             let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[site.id]) || site.title || site.name;
@@ -2015,7 +2039,7 @@ ${tText}
             let meta = appData[currentMonth].meta && appData[currentMonth].meta[site.id] ? appData[currentMonth].meta[site.id] : {};
             let sData = appData[currentMonth].data[site.id];
             if (!sData) return;
-            let sWorkers = sData.workers;
+            let sWorkers = sData.workers || [];
             let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[site.id]) || site.title || site.name;
             let rows = [
                 [`${currentMonth} - ${displayTitle} 出工總表`],
@@ -2023,14 +2047,14 @@ ${tText}
                 [],
                 ['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '上午照片檔名', '下午人數', '下午出工名單', '下午工項', '下午時間', '下午照片檔名', '未出工人員', '備註']
             ];
-            sData.days.forEach(d => {
+            (sData.days || []).forEach(d => {
                 let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
                 let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
-                let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+                let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
                 rows.push([
                     d.dayIndex, `${currentMonth}${d.dateStr}`, 
-                    d.amWorkers.length, sortedAm.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
-                    d.pmWorkers.length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
+                    (d.amWorkers || []).length, sortedAm.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
+                    (d.pmWorkers || []).length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
                     unworked, d.note || ''
                 ]);
             });
@@ -2062,7 +2086,7 @@ ${tText}
 
         let meta = appData[currentMonth].meta && appData[currentMonth].meta[site.id] ? appData[currentMonth].meta[site.id] : {};
         let sData = appData[currentMonth].data[site.id];
-        let sWorkers = sData.workers;
+        let sWorkers = sData.workers || [];
         let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[site.id]) || site.title || site.name;
         let rows = [
             [`${currentMonth} - ${displayTitle} 總表`],
@@ -2070,14 +2094,14 @@ ${tText}
             [],
             ['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '上午照片檔名', '下午人數', '下午出工名單', '下午工項', '下午時間', '下午照片檔名', '未出工人員', '備註']
         ];
-        sData.days.forEach(d => {
+        (sData.days || []).forEach(d => {
             let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
             let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
-            let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+            let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
             rows.push([
                 d.dayIndex, `${currentMonth}${d.dateStr}`, 
-                d.amWorkers.length, sortedAm.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
-                d.pmWorkers.length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
+                (d.amWorkers || []).length, sortedAm.join('、'), d.amProject || '', d.amTime || '', d.amPhotoName || (d.amPhoto ? '有照片' : '無'), 
+                (d.pmWorkers || []).length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', d.pmPhotoName || (d.pmPhoto ? '有照片' : '無'), 
                 unworked, d.note || ''
             ]);
         });
@@ -2130,21 +2154,21 @@ ${tText}
                 let monthData = appData[m];
                 if (monthData && monthData.data && monthData.data[siteId]) {
                     let sData = monthData.data[siteId];
-                    let sWorkers = sData.workers;
+                    let sWorkers = sData.workers || [];
                     let meta = monthData.meta && monthData.meta[siteId] ? monthData.meta[siteId] : {};
                     rows.push([`${m} 統計明細 (開工: ${meta.startDate || '未填'}, 工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}, 展延: ${meta.extension || 0})`]);
                     rows.push(['項次', '日期', '上午人數', '上午名單', '上午工項', '上午時間', '下午人數', '下午名單', '下午工項', '下午時間', '未出工人員', '備註']);
                     
-                    sData.days.forEach(d => {
-                        let hasWorked = d.amWorkers.length > 0 || d.pmWorkers.length > 0 || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
+                    (sData.days || []).forEach(d => {
+                        let hasWorked = (d.amWorkers && d.amWorkers.length > 0) || (d.pmWorkers && d.pmWorkers.length > 0) || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
                         if (hasWorked) totalWorkDays++;
                         let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
                         let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
-                        let unworked = sWorkers.filter(w => !d.amWorkers.includes(w) && !d.pmWorkers.includes(w)).join('、') || '無';
+                        let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
                         rows.push([
                             d.dayIndex, `${m}${d.dateStr}`,
-                            d.amWorkers.length, sortedAm.join('、'), d.amProject || '', d.amTime || '',
-                            d.pmWorkers.length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '',
+                            (d.amWorkers || []).length, sortedAm.join('、'), d.amProject || '', d.amTime || '',
+                            (d.pmWorkers || []).length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '',
                             unworked, d.note || ''
                         ]);
                     });
@@ -2166,37 +2190,32 @@ ${tText}
         exportYearlyToExcel();
     }
 
-    // 關鍵優化 4：本機優先秒開，背景異步自動對齊雲端
+    // 優先初始化本機畫面，確保完全不卡住
     initUI();
 
+    // 背景載入雲端資料
     async function autoLoadOnStart() {
         const syncStatus = document.getElementById('sync-status');
-        if (syncStatus) syncStatus.innerText = "背景同步雲端最新資料中...";
+        if (syncStatus) syncStatus.innerText = "背景同步雲端中...";
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 7000);
-
-            let res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
+            let res = await fetch(APPS_SCRIPT_URL);
             let json = await res.json();
             if (json && json.data && Object.keys(json.data).length > 0) {
                 appData = json.data;
                 checkDBIntegrity();
                 saveDB();
                 initUI();
-                if (syncStatus) syncStatus.innerText = "就緒（已同步最新雲端資料）";
+                if (syncStatus) syncStatus.innerText = "已同步雲端最新資料！";
+            } else {
+                if (syncStatus) syncStatus.innerText = "雲端無新資料，使用本機紀錄";
             }
         } catch (err) {
-            console.warn("自動載入雲端超時或失敗，使用本機快取", err);
-            if (syncStatus) syncStatus.innerText = "就緒（目前使用本機快取，可手動儲存）";
+            console.warn("背景同步失敗：", err);
+            if (syncStatus) syncStatus.innerText = "連線逾時，使用本機快取";
         }
     }
 
-    // 執行背景同步
     autoLoadOnStart();
-
-    // 移除原本每 30 秒的全量輪詢，徹底消除每半分鐘卡死問題！
 </script>
 
 </body>
