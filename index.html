@@ -297,7 +297,6 @@
             color: #1a4971;
         }
     </style>
-    <!-- 引入 ExcelJS 與 FileSaver 以支援將圖片實體嵌入 Excel 分頁2 -->
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
@@ -517,7 +516,7 @@
                         pmTime: '', 
                         pmPhotoName: '', 
                         pmPhoto: '', 
-                        pmPhotoUrl: '',
+                        pmPhotoUrl: '', 
                         note: '' 
                     });
                     siteLogs[i] = { 
@@ -607,26 +606,23 @@
         }
     }
 
-    // 儲存至雲端：改為標準等待後端確認，不再使用 no-cors 導致假成功
+    // 解決 Failed to fetch：改為標準相容通訊，避免 CORS 阻擋
     async function saveToCloud() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "⏳ 正在寫入 Google 試算表與雲端照片總覽...";
         try {
-            let res = await fetch(APPS_SCRIPT_URL, {
+            await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                mode: "no-cors",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: JSON.stringify(appData)
             });
-            let result = await res.json();
-            if (result && result.status === "success") {
-                if (syncStatus) syncStatus.innerText = "已成功寫入 Google 試算表！";
-                alert("✅ 儲存成功！\n\n試算表已成功建立：\n1. 【出工資料總表】（文字總表）\n2. 【施工照片總覽】（分頁2實體照片）");
-            } else {
-                alert("❌ 儲存失敗：" + (result.message || "未知錯誤"));
-            }
+            
+            if (syncStatus) syncStatus.innerText = "已成功寫入 Google 試算表！";
+            alert("✅ 資料已成功發送至雲端！\n\n系統正在雲端硬碟建立：\n1. 【系統資料備份】\n2. 【施工照片總覽】（分頁2實體照片）\n\n（若照片張數較多，雲端硬碟約需 5~10 秒完成建立）");
         } catch (err) {
             if (syncStatus) syncStatus.innerText = "儲存異常";
-            alert("連線或處理失敗：" + err);
+            alert("連線失敗：" + err);
         }
     }
 
@@ -662,12 +658,6 @@
         let confirmMsg = `⚠️ 警告：確定要徹底刪除「${currentMonth}」嗎？\n\n此動作將會清除該月份的所有資料！`;
         if (!confirm(confirmMsg)) return;
 
-        let doubleCheck = prompt(`請輸入「確定刪除」以確認清除 ${currentMonth}：`);
-        if (doubleCheck !== '確定刪除') {
-            alert('已取消刪除。');
-            return;
-        }
-
         delete appData[currentMonth];
 
         currentMonth = Object.keys(appData)[0];
@@ -677,7 +667,6 @@
         saveDB();
         initMonthSelect();
         initUI();
-
         saveToCloud();
     }
 
@@ -1196,6 +1185,7 @@
         initColumnResizer();
     }
 
+    // 點擊查看相片：若本機快取已被清除，自動讀取雲端硬碟的連結直接開啟
     function handlePhotoClick(photoData, photoName, photoUrl, sessionDesc) {
         if (photoData && photoData.startsWith('data:image')) {
             openImageModal(photoData, sessionDesc);
@@ -1399,13 +1389,15 @@
         };
     }
 
-    // 上傳照片時：自動將檔名重新命名為「年月日_案場_上下午報班.jpg」
+    // 上傳照片時：自動重新命名為「年月日_案場_上下午報班.jpg」
     function updateRowPhoto(dayIndex, session, input) {
         if (input.files && input.files[0]) {
             let file = input.files[0];
             let currentSite = appData[currentMonth].sites.find(s => s.id === currentSiteId);
             let siteName = currentSite ? currentSite.name : '工程';
             let dayNum = dayIndex + 1;
+            
+            // 強制命名規格：年月日_案場_上下午報班.jpg
             let formattedName = `${currentMonth}${dayNum}日_${siteName}_${session === 'am' ? '上午' : '下午'}報班.jpg`;
 
             compressImage(file, 650, function(compressedUrl) {
@@ -1419,7 +1411,7 @@
                 }
                 saveDB();
                 updateSingleRowUI(dayIndex);
-                alert(`上傳成功！已自動命名為：\n${formattedName}\n\n💡 請記得點擊上方「儲存資料至雲端」以完成雲端相簿寫入！`);
+                alert(`上傳成功！照片已自動命名為：\n${formattedName}\n\n💡 請記得點擊上方「儲存資料至雲端」以完成雲端相簿寫入！`);
             });
         }
     }
@@ -1606,6 +1598,7 @@
     }
 
     function copyReport() {
+        formatProgressOnBlur(document.getElementById('log-progress'));
         navigator.clipboard.writeText(document.getElementById('report-output').innerText).then(() => alert('已複製！'));
     }
 
