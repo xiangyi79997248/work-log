@@ -529,7 +529,7 @@
                         dayIndex: i, 
                         dateStr: `${i}日`, 
                         amWorkers: [], 
-                        amOtherCount: 0,
+                        amOtherCount: 0, 
                         amProject: '', 
                         amTime: '', 
                         amPhotoName: '', 
@@ -633,7 +633,7 @@
 
     async function saveToCloud() {
         const syncStatus = document.getElementById('sync-status');
-        if (syncStatus) syncStatus.innerText = "⏳ 正在寫入 Google 試算表與雲端照片總覽...";
+        if (syncStatus) syncStatus.innerText = "⏳ 正在寫入雲端備份...";
         try {
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
@@ -642,8 +642,8 @@
                 body: JSON.stringify(appData)
             });
             
-            if (syncStatus) syncStatus.innerText = "已成功寫入 Google 試算表！";
-            alert("✅ 資料已成功發送至雲端！\n\n系統正在雲端硬碟建立：\n1. 【系統資料備份】\n2. 【施工照片總覽】\n\n（若照片張數較多，雲端硬碟約需 5~10 秒完成建立）");
+            if (syncStatus) syncStatus.innerText = "已成功寫入雲端！";
+            alert("✅ 資料已成功發送至雲端儲存！");
         } catch (err) {
             if (syncStatus) syncStatus.innerText = "儲存異常";
             alert("連線失敗：" + err);
@@ -675,48 +675,6 @@
         } catch (err) {
             if (syncStatus) syncStatus.innerText = "載入失敗";
             alert('載入失敗：' + err.message);
-        }
-    }
-
-    async function deleteCurrentMonth() {
-        let totalMonths = Object.keys(appData).length;
-        if (totalMonths <= 1) {
-            alert('系統中至少需要保留一個月份的資料，無法刪除！');
-            return;
-        }
-
-        let confirmMsg = `⚠️ 警告：確定要徹底刪除「${currentMonth}」嗎？\n\n此動作將會清除該月份的所有資料！`;
-        if (!confirm(confirmMsg)) return;
-
-        let doubleCheck = prompt(`請輸入「確定刪除」以確認清除 ${currentMonth}：`);
-        if (doubleCheck !== '確定刪除') {
-            alert('已取消刪除。');
-            return;
-        }
-
-        delete appData[currentMonth];
-
-        currentMonth = Object.keys(appData)[0];
-        let monthSites = appData[currentMonth].sites;
-        currentSiteId = monthSites[0] ? monthSites[0].id : '';
-
-        saveDB();
-        initMonthSelect();
-        initUI();
-
-        const syncStatus = document.getElementById('sync-status');
-        if (syncStatus) syncStatus.innerText = "正在同步刪除至雲端...";
-        try {
-            await fetch(APPS_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: JSON.stringify(appData)
-            });
-            if (syncStatus) syncStatus.innerText = "雲端資料已同步刪除！";
-            alert(`已成功刪除該月份！`);
-        } catch (err) {
-            alert(`本地已刪除，但雲端同步失敗：${err}`);
         }
     }
 
@@ -816,6 +774,35 @@
         initUI();
         saveToCloud();
         alert('已成功刪除該年份並同步雲端！');
+    }
+
+    function deleteCurrentMonth() {
+        let totalMonths = Object.keys(appData).length;
+        if (totalMonths <= 1) {
+            alert('系統中至少需要保留一個月份的資料，無法刪除！');
+            return;
+        }
+
+        let confirmMsg = `⚠️ 警告：確定要徹底刪除「${currentMonth}」嗎？\n\n此動作將會清除該月份的所有資料！`;
+        if (!confirm(confirmMsg)) return;
+
+        let doubleCheck = prompt(`請輸入「確定刪除」以確認清除 ${currentMonth}：`);
+        if (doubleCheck !== '確定刪除') {
+            alert('已取消刪除。');
+            return;
+        }
+
+        delete appData[currentMonth];
+
+        currentMonth = Object.keys(appData)[0];
+        let monthSites = appData[currentMonth].sites;
+        currentSiteId = monthSites[0] ? monthSites[0].id : '';
+
+        saveDB();
+        initMonthSelect();
+        initUI();
+        saveToCloud();
+        alert(`已成功刪除該月份！`);
     }
 
     function addNewMonth() {
@@ -2104,7 +2091,7 @@ ${tText}
         container.innerHTML = html || '<div style="padding:15px; color:#a0aec0;">尚無施工日誌資料</div>';
     }
 
-    // 匯出全部案場月總表（已刪除各案場照片檔名欄位、施工照片總覽分頁已刪除照片名稱欄位）
+    // 匯出全部案場出工月總表（含實體照片總覽分頁）
     async function exportToExcel() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "⏳ 正在處理實體照片嵌入並生成 Excel...";
@@ -2132,7 +2119,6 @@ ${tText}
                 ws.addRow([`${currentMonth} - ${displayTitle} 出工總表`]);
                 ws.addRow([`開工日期: ${meta.startDate || '未填'}  |  完工工期: 自動計算  |  工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}  |  展延: ${meta.extension || 0}  |  停工: ${meta.suspensionDate || '無'}  |  復工: ${meta.resumptionDate || '無'}`]);
                 ws.addRow([]);
-                // 已刪除照片檔名欄位
                 ws.addRow(['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '下午人數', '下午出工名單', '下午工項', '下午時間', '未出工人員', '備註']);
 
                 (sData.days || []).forEach(d => {
@@ -2174,7 +2160,7 @@ ${tText}
                 ws.columns.forEach(col => { col.width = 16; });
             }
 
-            // 分頁 2：施工照片總覽（已刪除「照片名稱」欄位）
+            // 分頁 2：施工照片總覽
             let photoSheet = workbook.addWorksheet("📷 施工照片總覽");
             photoSheet.addRow(['項次', '案場名稱', '報班日期', '時段', '施工項目', '實體施工照片']);
             photoSheet.columns = [
@@ -2277,7 +2263,7 @@ ${tText}
         XLSX.writeFile(wb, `全案場_施工日誌總表_${currentMonth}.xlsx`);
     }
 
-    // 單案場當月 Excel 下載（已同步移除照片檔名欄位）
+    // 單案場當月 Excel 下載
     function exportSingleSiteMonthly(siteId) {
         let site = appData[currentMonth].sites.find(s => s.id === siteId);
         if (!site) return;
@@ -2329,7 +2315,7 @@ ${tText}
         XLSX.writeFile(wb, `${site.name}_工程總表_${currentMonth}.xlsx`);
     }
 
-    // 全部案場年度總表匯出（計算總施作天數）
+    // 全部案場年度總表匯出
     function exportYearlyToExcel() {
         let yearMatch = currentMonth.match(/(\d+)年/);
         if (!yearMatch) { alert('無法辨識當前年份！'); return; }
@@ -2382,10 +2368,8 @@ ${tText}
                     (sData.days || []).forEach(d => {
                         let hasWorked = (d.amWorkers && d.amWorkers.length > 0) || (d.pmWorkers && d.pmWorkers.length > 0) || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
                         if (hasWorked) totalWorkDays++;
-                        let expandedAm = getExpandedWorkerList(d.amWorkers, d.amOtherCount);
-                        let expandedPm = getExpandedWorkerList(d.pmWorkers, d.pmOtherCount);
-                        let sortedAm = sortSelectedWorkersBySiteMaster(expandedAm, sWorkers);
-                        let sortedPm = sortSelectedWorkersBySiteMaster(expandedPm, sWorkers);
+                        let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
+                        let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
                         let actualAmCount = getActualWorkerCount(d.amWorkers, d.amOtherCount);
                         let actualPmCount = getActualWorkerCount(d.pmWorkers, d.pmOtherCount);
                         let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
@@ -2416,12 +2400,13 @@ ${tText}
 
     initUI();
 
+    // 背景載入雲端資料
     async function autoLoadOnStart() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "背景同步雲端中...";
         
         let controller = new AbortController();
-        let timeoutId = setTimeout(() => controller.abort(), 6000);
+        let timeoutId = setTimeout(() => controller.abort(), 25000);
 
         try {
             let res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
@@ -2432,7 +2417,7 @@ ${tText}
                 json = JSON.parse(text);
             } catch (e) {
                 console.warn("雲端回傳未授權或非 JSON 內容，使用本機快取");
-                if (syncStatus) syncStatus.innerText = "雲端權限待設定，使用本機快取";
+                if (syncStatus) syncStatus.innerText = "使用本機紀錄 (待同步)";
                 return;
             }
             if (json && json.data && Object.keys(json.data).length > 0) {
@@ -2446,8 +2431,8 @@ ${tText}
             }
         } catch (err) {
             clearTimeout(timeoutId);
-            console.warn("背景同步失敗：", err);
-            if (syncStatus) syncStatus.innerText = "連線逾時，使用本機快取";
+            console.warn("連線逾時或暫時中斷：", err);
+            if (syncStatus) syncStatus.innerText = "離線模式（使用本機資料）";
         }
     }
 
