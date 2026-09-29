@@ -306,6 +306,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 
@@ -534,7 +535,7 @@
                         amTime: '', 
                         amPhotoName: '', 
                         amPhoto: '', 
-                        amPhotoUrl: '',
+                        amPhotoUrl: '', 
                         pmWorkers: [], 
                         pmOtherCount: 0, 
                         pmProject: '', 
@@ -1477,7 +1478,7 @@
                 }
                 saveDB();
                 updateSingleRowUI(dayIndex);
-                alert(`上傳成功！照片已自動命名為：\n${formattedName}\n\n💡 請記得點擊上方「儲存資料至雲端」以完成雲端相簿寫入！`);
+                alert(`上傳成功！照片已自動命名為：\n${formattedName}\n\n💡 請記得點擊上方「儲存資料至雲端」以完成雲端備份！`);
             });
         }
     }
@@ -1928,7 +1929,7 @@ ${tText}
             if (site.isWarrantyRoot) {
                 let subList = appData[currentMonth].warrantySubSites && appData[currentMonth].warrantySubSites[site.id] ? appData[currentMonth].warrantySubSites[site.id] : [];
                 html += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 8px; padding: 0 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 8px; padding: 0 5px; flex-wrap: wrap; gap: 8px;">
                         <h4 style="color: #2d3748; margin: 0; font-size:16px;">📍 案場：${site.name}（保固案場總覽）</h4>
                         <div>
                             <button class="btn btn-red btn-sm" onclick="exportSingleSiteMonthly('${site.id}')">📥 下載保固案場 Excel</button>
@@ -1952,11 +1953,11 @@ ${tText}
             let sWorkers = sData.workers;
             let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[site.id]) || site.title || site.name;
             html += `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 8px; padding: 0 5px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 8px; padding: 0 5px; flex-wrap: wrap; gap: 8px;">
                     <h4 style="color: #2d3748; margin: 0; font-size:16px;">📍 案場：${displayTitle}</h4>
-                    <div>
-                        <button class="btn btn-red btn-sm" onclick="exportSingleSiteMonthly('${site.id}')">📥 下載此案場當月 Excel</button>
-                        <button class="btn btn-blue btn-sm" onclick="exportSingleSiteYearly('${site.id}')">📈 下載此案場年度 Excel</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-red btn-sm" onclick="exportSingleSiteMonthlyWithPhotos('${site.id}')">📥 下載此案場當月 Excel（含照片）</button>
+                        <button class="btn btn-blue btn-sm" onclick="downloadSingleSitePhotosZip('${site.id}')">🗂️ 打包下載照片 (ZIP)</button>
                     </div>
                 </div>
             `;
@@ -2206,6 +2207,166 @@ ${tText}
         }
     }
 
+    // 單案場當月 Excel 下載（含分頁 2 施工照片總覽）
+    async function exportSingleSiteMonthlyWithPhotos(siteId) {
+        let site = appData[currentMonth].sites.find(s => s.id === siteId);
+        if (!site) return;
+        let sData = appData[currentMonth].data[site.id];
+        if (!sData) {
+            alert('此案場尚無出工資料！');
+            return;
+        }
+
+        const syncStatus = document.getElementById('sync-status');
+        if (syncStatus) syncStatus.innerText = `⏳ 正在產生「${site.name}」含照片之 Excel...`;
+
+        try {
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = "翔奕營造管理系統";
+            workbook.created = new Date();
+
+            let meta = (appData[currentMonth].meta && appData[currentMonth].meta[site.id]) || {};
+            let sWorkers = sData.workers || [];
+            let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[site.id]) || site.title || site.name;
+            
+            let safeSheetName = site.name.replace(/[:\\/?*\[\]]/g, "_").substring(0, 25);
+            let ws = workbook.addWorksheet(safeSheetName);
+
+            ws.addRow([`${currentMonth} - ${displayTitle} 出工總表`]);
+            ws.addRow([`開工日期: ${meta.startDate || '未填'}  |  完工工期: 自動計算  |  工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}  |  展延: ${meta.extension || 0}  |  停工: ${meta.suspensionDate || '無'}  |  復工: ${meta.resumptionDate || '無'}`]);
+            ws.addRow([]);
+            ws.addRow(['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '下午人數', '下午出工名單', '下午工項', '下午時間', '未出工人員', '備註']);
+
+            let photosToEmbed = [];
+
+            (sData.days || []).forEach(d => {
+                let expandedAm = getExpandedWorkerList(d.amWorkers, d.amOtherCount);
+                let expandedPm = getExpandedWorkerList(d.pmWorkers, d.pmOtherCount);
+                let sortedAm = sortSelectedWorkersBySiteMaster(expandedAm, sWorkers);
+                let sortedPm = sortSelectedWorkersBySiteMaster(expandedPm, sWorkers);
+                let actualAmCount = getActualWorkerCount(d.amWorkers, d.amOtherCount);
+                let actualPmCount = getActualWorkerCount(d.pmWorkers, d.pmOtherCount);
+                let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
+
+                ws.addRow([
+                    d.dayIndex, `${currentMonth}${d.dateStr}`, 
+                    actualAmCount, sortedAm.join('、'), d.amProject || '', d.amTime || '', 
+                    actualPmCount, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', 
+                    unworked, d.note || ''
+                ]);
+
+                if (d.amPhoto && d.amPhoto.startsWith('data:image')) {
+                    photosToEmbed.push({
+                        dateStr: `${currentMonth}${d.dateStr}`,
+                        session: '上午',
+                        project: d.amProject || '無',
+                        base64: d.amPhoto
+                    });
+                }
+                if (d.pmPhoto && d.pmPhoto.startsWith('data:image')) {
+                    photosToEmbed.push({
+                        dateStr: `${currentMonth}${d.dateStr}`,
+                        session: '下午',
+                        project: d.pmProject || '無',
+                        base64: d.pmPhoto
+                    });
+                }
+            });
+
+            ws.columns.forEach(col => { col.width = 16; });
+
+            // 分頁 2：此案場照片總覽
+            let photoSheet = workbook.addWorksheet("📷 施工照片總覽");
+            photoSheet.addRow(['項次', '案場名稱', '報班日期', '時段', '施工項目', '實體施工照片']);
+            photoSheet.columns = [
+                { width: 8 },
+                { width: 20 },
+                { width: 16 },
+                { width: 10 },
+                { width: 35 },
+                { width: 32 }
+            ];
+
+            if (photosToEmbed.length === 0) {
+                photoSheet.addRow(['', site.name, '', '', '此案場當月尚無照片上傳紀錄', '']);
+            } else {
+                for (let i = 0; i < photosToEmbed.length; i++) {
+                    let p = photosToEmbed[i];
+                    let rNum = i + 2;
+                    let row = photoSheet.addRow([i + 1, site.name, p.dateStr, p.session, p.project, '']);
+                    row.height = 110;
+
+                    let imageId = workbook.addImage({
+                        base64: p.base64,
+                        extension: 'jpeg'
+                    });
+
+                    photoSheet.addImage(imageId, {
+                        tl: { col: 5.1, row: rNum - 0.9 },
+                        ext: { width: 140, height: 100 },
+                        editAs: 'oneCell'
+                    });
+                }
+            }
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), `${site.name}_出工與照片總表_${currentMonth}.xlsx`);
+            if (syncStatus) syncStatus.innerText = "已成功匯出單案場含照片總表！";
+            alert(`已成功匯出「${site.name}」出工與照片總表！\n\n點擊 Excel 分頁 2 即可直接瀏覽本案場的所有實體照片。`);
+        } catch (err) {
+            console.error(err);
+            alert("匯出 Excel 失敗：" + err);
+            if (syncStatus) syncStatus.innerText = "匯出失敗";
+        }
+    }
+
+    // 單案場當月實體照片打包下載為 ZIP 壓縮檔
+    async function downloadSingleSitePhotosZip(siteId) {
+        let site = appData[currentMonth].sites.find(s => s.id === siteId);
+        if (!site) return;
+        let sData = appData[currentMonth].data[site.id];
+        if (!sData || !sData.days) {
+            alert('此案場尚無出工資料！');
+            return;
+        }
+
+        let zip = new JSZip();
+        let folder = zip.folder(`${currentMonth}_${site.name}_施工照片庫`);
+        let photoCount = 0;
+
+        (sData.days || []).forEach(d => {
+            if (d.amPhoto && d.amPhoto.startsWith('data:image')) {
+                let base64Data = d.amPhoto.split(',')[1];
+                let filename = d.amPhotoName || `${currentMonth}${d.dayIndex}日_${site.name}_上午報班.jpg`;
+                folder.file(filename, base64Data, { base64: true });
+                photoCount++;
+            }
+            if (d.pmPhoto && d.pmPhoto.startsWith('data:image')) {
+                let base64Data = d.pmPhoto.split(',')[1];
+                let filename = d.pmPhotoName || `${currentMonth}${d.dayIndex}日_${site.name}_下午報班.jpg`;
+                folder.file(filename, base64Data, { base64: true });
+                photoCount++;
+            }
+        });
+
+        if (photoCount === 0) {
+            alert(`「${site.name}」在 ${currentMonth} 尚無任何上傳的照片！`);
+            return;
+        }
+
+        const syncStatus = document.getElementById('sync-status');
+        if (syncStatus) syncStatus.innerText = `⏳ 正在打包 ${photoCount} 張照片...`;
+
+        zip.generateAsync({ type: "blob" }).then(function(content) {
+            saveAs(content, `${site.name}_${currentMonth}_施工照片庫.zip`);
+            if (syncStatus) syncStatus.innerText = "照片壓縮檔下載完成！";
+            alert(`✅ 已成功打包 ${photoCount} 張施工照片！`);
+        }).catch(function(err) {
+            alert("打包照片失敗：" + err);
+            if (syncStatus) syncStatus.innerText = "打包失敗";
+        });
+    }
+
     // 匯出每日施工日誌總表
     function exportLogSummaryToExcel() {
         let wb = XLSX.utils.book_new();
@@ -2263,7 +2424,7 @@ ${tText}
         XLSX.writeFile(wb, `全案場_施工日誌總表_${currentMonth}.xlsx`);
     }
 
-    // 單案場當月 Excel 下載
+    // 單案場當月 Excel 下載（保固案場專用）
     function exportSingleSiteMonthly(siteId) {
         let site = appData[currentMonth].sites.find(s => s.id === siteId);
         if (!site) return;
@@ -2284,35 +2445,6 @@ ${tText}
             XLSX.writeFile(wb, `${site.name}_工程總表_${currentMonth}.xlsx`);
             return;
         }
-
-        let meta = appData[currentMonth].meta && appData[currentMonth].meta[site.id] ? appData[currentMonth].meta[site.id] : {};
-        let sData = appData[currentMonth].data[site.id];
-        let sWorkers = sData.workers || [];
-        let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[site.id]) || site.title || site.name;
-        let rows = [
-            [`${currentMonth} - ${displayTitle} 總表`],
-            [`開工日期: ${meta.startDate || '未填'}  |  完工工期: 自動計算  |  工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}  |  展延: ${meta.extension || 0}  |  停工: ${meta.suspensionDate || '無'}  |  復工: ${meta.resumptionDate || '無'}`],
-            [],
-            ['項次', '日期', '上午人數', '上午出工名單', '上午工項', '上午時間', '下午人數', '下午出工名單', '下午工項', '下午時間', '未出工人員', '備註']
-        ];
-        (sData.days || []).forEach(d => {
-            let expandedAm = getExpandedWorkerList(d.amWorkers, d.amOtherCount);
-            let expandedPm = getExpandedWorkerList(d.pmWorkers, d.pmOtherCount);
-            let sortedAm = sortSelectedWorkersBySiteMaster(expandedAm, sWorkers);
-            let sortedPm = sortSelectedWorkersBySiteMaster(expandedPm, sWorkers);
-            let actualAmCount = getActualWorkerCount(d.amWorkers, d.amOtherCount);
-            let actualPmCount = getActualWorkerCount(d.pmWorkers, d.pmOtherCount);
-            let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
-            rows.push([
-                d.dayIndex, `${currentMonth}${d.dateStr}`, 
-                actualAmCount, sortedAm.join('、'), d.amProject || '', d.amTime || '', 
-                actualPmCount, sortedPm.join('、'), d.pmProject || '', d.pmTime || '', 
-                unworked, d.note || ''
-            ]);
-        });
-        let ws = XLSX.utils.aoa_to_sheet(rows);
-        XLSX.utils.book_append_sheet(wb, ws, site.name.replace(/[:\\/?*\[\]]/g, "_"));
-        XLSX.writeFile(wb, `${site.name}_工程總表_${currentMonth}.xlsx`);
     }
 
     // 全部案場年度總表匯出
@@ -2370,13 +2502,11 @@ ${tText}
                         if (hasWorked) totalWorkDays++;
                         let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
                         let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
-                        let actualAmCount = getActualWorkerCount(d.amWorkers, d.amOtherCount);
-                        let actualPmCount = getActualWorkerCount(d.pmWorkers, d.pmOtherCount);
                         let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
                         rows.push([
                             d.dayIndex, `${m}${d.dateStr}`,
-                            actualAmCount, sortedAm.join('、'), d.amProject || '', d.amTime || '',
-                            actualPmCount, sortedPm.join('、'), d.pmProject || '', d.pmTime || '',
+                            (d.amWorkers || []).length, sortedAm.join('、'), d.amProject || '', d.amTime || '',
+                            (d.pmWorkers || []).length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '',
                             unworked, d.note || ''
                         ]);
                     });
@@ -2392,10 +2522,6 @@ ${tText}
         });
 
         XLSX.writeFile(wb, `全部案場工程年度總表_${targetYear}.xlsx`);
-    }
-
-    function exportSingleSiteYearly(siteId) {
-        exportYearlyToExcel();
     }
 
     initUI();
