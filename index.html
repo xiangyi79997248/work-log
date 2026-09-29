@@ -382,13 +382,13 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; margin-bottom: 15px; align-items: start;">
                 <div>
                     <label style="display: block; margin-bottom: 5px;"><strong>上午天氣：</strong></label>
-                    <select id="log-weather-am" onchange="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
+                    <select id="log-weather-am" onchange="debouncedSaveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
                         <option value="晴">晴</option><option value="雨">雨</option><option value="陰">陰</option>
                     </select>
                 </div>
                 <div>
                     <label style="display: block; margin-bottom: 5px;"><strong>下午天氣：</strong></label>
-                    <select id="log-weather-pm" onchange="saveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
+                    <select id="log-weather-pm" onchange="debouncedSaveLogData()" style="width: 100%; padding: 8px; font-size: 14px; height: 38px;">
                         <option value="晴">晴</option><option value="雨">雨</option><option value="陰">陰</option>
                     </select>
                 </div>
@@ -402,14 +402,14 @@
             </div>
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px;"><strong>今日施工進度⬇️：</strong></label>
-                <textarea id="log-progress" rows="3" onblur="formatProgressOnBlur(this)" oninput="saveLogData()" style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;" placeholder="可自由換行打字，移開游標或複製時自動加上藍色數字編號"></textarea>
+                <textarea id="log-progress" rows="3" onblur="formatProgressOnBlur(this)" oninput="debouncedSaveLogData()" style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;" placeholder="可自由換行打字，移開游標或複製時自動加上藍色數字編號"></textarea>
             </div>
             <h3>📊 各工種出工人數細目：</h3>
             <div class="log-grid" id="log-trades-grid"></div>
             <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr; gap: 12px;">
-                <div><label><strong>施工取樣試驗紀錄：</strong></label><textarea id="log-sampling" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
-                <div><label><strong>通知協力廠商辦理事項：</strong></label><textarea id="log-notice" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
-                <div><label><strong>重要事項紀錄：</strong></label><textarea id="log-important" rows="2" oninput="saveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>施工取樣試驗紀錄：</strong></label><textarea id="log-sampling" rows="2" oninput="debouncedSaveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>通知協力廠商辦理事項：</strong></label><textarea id="log-notice" rows="2" oninput="debouncedSaveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
+                <div><label><strong>重要事項紀錄：</strong></label><textarea id="log-important" rows="2" oninput="debouncedSaveLogData()" style="width:100%; padding:6px; border:1px solid #ccc;"></textarea></div>
             </div>
             <div class="report-section" style="margin-top: 15px;">
                 <h3>📋 完整日誌文字預覽</h3>
@@ -602,15 +602,23 @@
         }
     }
 
+    // 剔除圖片 Base64，大幅降低 Payload 體積，徹底解決傳輸卡死超時問題
     async function saveToCloud() {
         const syncStatus = document.getElementById('sync-status');
         syncStatus.innerText = "正在儲存至雲端...";
         try {
+            const cleanData = JSON.parse(JSON.stringify(appData, (key, value) => {
+                if ((key === 'amPhoto' || key === 'pmPhoto') && value && typeof value === 'string' && value.startsWith('data:image')) {
+                    return ''; 
+                }
+                return value;
+            }));
+
             await fetch(APPS_SCRIPT_URL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(appData)
+                body: JSON.stringify(cleanData)
             });
             syncStatus.innerText = "已成功同步至雲端！";
             alert('資料已成功儲存至 Google 試算表！');
@@ -624,7 +632,11 @@
         const syncStatus = document.getElementById('sync-status');
         syncStatus.innerText = "正在從雲端載入...";
         try {
-            let res = await fetch(APPS_SCRIPT_URL);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            let res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             let json = await res.json();
             if (json && json.data && Object.keys(json.data).length > 0) {
                 appData = json.data;
@@ -1416,7 +1428,6 @@
         });
     }
 
-    // 計算自動帶入施工日誌的工人字串（含 新人*幾）
     function calculateAutoWorkersSummary(siteId, dayNum) {
         if (!appData[currentMonth] || !appData[currentMonth].data || !appData[currentMonth].data[siteId]) return '';
         let sData = appData[currentMonth].data[siteId];
@@ -1435,7 +1446,6 @@
         return sorted.join('、');
     }
 
-    // 當出工表有變更時，自動更新施工日誌的出工人員（如果尚未手動改寫）
     function syncAutoWorkersSummaryToLog(siteId, dayNum) {
         if (!appData[currentMonth].logs || !appData[currentMonth].logs[siteId]) return;
         let log = appData[currentMonth].logs[siteId][dayNum];
@@ -1667,7 +1677,7 @@
         if (!siteId) return;
         let log = appData[currentMonth].logs[siteId][dayIndex];
         log.isManualSummary = true;
-        saveLogData();
+        debouncedSaveLogData();
     }
 
     function renderLogForm() {
@@ -1710,7 +1720,6 @@
         document.getElementById('log-notice').value = log.notice || "";
         document.getElementById('log-important').value = log.important || "";
 
-        // 自動計算出工名單與新人*幾
         let autoStr = calculateAutoWorkersSummary(siteId, dayIndex);
         if (!log.isManualSummary || !log.workersSummary) {
             log.workersSummary = autoStr;
@@ -1741,21 +1750,29 @@
         let siteId = document.getElementById('log-project-select').value;
         if (!appData[currentMonth].logs[siteId][dayIndex].trades) appData[currentMonth].logs[siteId][dayIndex].trades = {};
         appData[currentMonth].logs[siteId][dayIndex].trades[t] = val;
-        saveDB(); generateLogText();
+        debouncedSaveLogData();
     }
 
     function updateCustomTradeName(idx, val) {
         let dayIndex = parseInt(document.getElementById('log-date-select').value);
         let siteId = document.getElementById('log-project-select').value;
         appData[currentMonth].logs[siteId][dayIndex].customTrades[idx].name = val;
-        saveDB(); generateLogText();
+        debouncedSaveLogData();
     }
 
     function updateCustomTradeVal(idx, val) {
         let dayIndex = parseInt(document.getElementById('log-date-select').value);
         let siteId = document.getElementById('log-project-select').value;
         appData[currentMonth].logs[siteId][dayIndex].customTrades[idx].val = val;
-        saveDB(); generateLogText();
+        debouncedSaveLogData();
+    }
+
+    let saveLogTimeout = null;
+    function debouncedSaveLogData() {
+        clearTimeout(saveLogTimeout);
+        saveLogTimeout = setTimeout(() => {
+            saveLogData();
+        }, 300);
     }
 
     function saveLogData() {
@@ -1770,7 +1787,8 @@
         log.sampling = document.getElementById('log-sampling').value;
         log.notice = document.getElementById('log-notice').value;
         log.important = document.getElementById('log-important').value;
-        saveDB(); generateLogText();
+        saveDB(); 
+        generateLogText();
     }
 
     function formatProgressOnBlur(textarea) {
@@ -2283,12 +2301,17 @@ ${tText}
         exportYearlyToExcel();
     }
 
-    // 網頁開啟時自動從雲端載入最新資料
+    // 網頁開啟時自動載入（加入超時防護，防止一直卡住）
     async function autoLoadOnStart() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "正在自動同步雲端最新資料...";
         try {
-            let res = await fetch(APPS_SCRIPT_URL);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
+            let res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             let json = await res.json();
             if (json && json.data && Object.keys(json.data).length > 0) {
                 appData = json.data;
@@ -2296,6 +2319,8 @@ ${tText}
                 saveDB();
                 initUI();
                 if (syncStatus) syncStatus.innerText = "已自動同步雲端最新資料！";
+            } else {
+                initUI();
             }
         } catch (err) {
             console.warn("自動載入雲端失敗，改用本機快取", err);
@@ -2313,24 +2338,7 @@ ${tText}
 
     // 啟動自動雲端載入
     autoLoadOnStart();
-
-    // 背景定時檢查更新
-    setInterval(async () => {
-        try {
-            let res = await fetch(APPS_SCRIPT_URL);
-            let json = await res.json();
-            if (json && json.data && Object.keys(json.data).length > 0) {
-                appData = json.data;
-                checkDBIntegrity();
-                saveDB();
-                initUI();
-            }
-        } catch (e) {
-            // 背景同步失敗不影響使用者操作
-        }
-    }, 120000);
 </script>
 
 </body>
 </html>
-```[cite: 1]
