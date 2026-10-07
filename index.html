@@ -621,7 +621,18 @@
     }
     checkDBIntegrity();
 
-    let currentMonth = Object.keys(appData)[0] || '115年9月';
+    // 💡 自動取得當前系統民國年月（例如 115年10月），若無則自動取資料庫最新月份
+    let todayObj = new Date();
+    let currentMinguoYear = todayObj.getFullYear() - 1911;
+    let currentMonthNum = todayObj.getMonth() + 1;
+    let targetDefaultMonth = `${currentMinguoYear}年${currentMonthNum}月`;
+
+    let availableMonths = Object.keys(appData);
+    let initialMonth = availableMonths.includes(targetDefaultMonth) 
+        ? targetDefaultMonth 
+        : (availableMonths[availableMonths.length - 1] || '115年9月');
+
+    let currentMonth = initialMonth;
     let currentSiteId = (appData[currentMonth] && appData[currentMonth].sites && appData[currentMonth].sites[0]) ? appData[currentMonth].sites[0].id : 'qigu';
 
     function saveDB() {
@@ -661,7 +672,7 @@
             try {
                 json = JSON.parse(text);
             } catch (parseErr) {
-                throw new Error("Google Apps Script 存取權限不足，回傳了登入頁面。請至 Apps Script 將「誰可以存取」設定為「所有人 (Anyone)」並重新部署！");
+                throw new Error("Google Apps Script 存取權限不足，回傳了登入頁面。請至 Apps Script 將「誰可以存取」設定為碼「所有人 (Anyone)」並重新部署！");
             }
             if (json && json.data && Object.keys(json.data).length > 0) {
                 appData = json.data;
