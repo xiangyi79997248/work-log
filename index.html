@@ -522,7 +522,7 @@
             };
             db[m].sites.forEach(site => {
                 if (site.isWarrantyRoot) return;
-                let daysCount = m.includes('9月') ? 30 : 31;
+                let daysCount = getDaysInMonth(m);
                 let dayList = [];
                 let siteLogs = {};
                 for (let i = 1; i <= daysCount; i++) {
@@ -579,6 +579,16 @@
         appData = getInitialDB();
     }
 
+    
+    function getDaysInMonth(monthKey) {
+        let yMatch = monthKey.match(/(\d+)年/);
+        let mMatch = monthKey.match(/(\d+)月/);
+        if (!yMatch || !mMatch) return 31;
+        let westernYear = parseInt(yMatch[1]) + 1911;
+        let month = parseInt(mMatch[1]);
+        return new Date(westernYear, month, 0).getDate();
+    }
+
     function checkDBIntegrity() {
         if (!appData || typeof appData !== 'object' || Object.keys(appData).length === 0) {
             appData = getInitialDB();
@@ -592,27 +602,83 @@
                 appData[m].sites.push({ id: 'warranty_pool', name: '保固中案場', title: '保固中各維修案場管理', isWarrantyRoot: true, fixed: true });
             }
             if (!appData[m].customSiteNames) appData[m].customSiteNames = {};
+            
+            let daysCount = getDaysInMonth(m);
+            
             appData[m].sites.forEach(s => {
-                if (!s.isWarrantyRoot && !appData[m].customSiteNames[s.id]) {
+                if (s.isWarrantyRoot) return;
+                if (!appData[m].customSiteNames[s.id]) {
                     appData[m].customSiteNames[s.id] = s.title || s.name;
                 }
-            });
-            if (!appData[m].data) appData[m].data = {};
-            if (!appData[m].logs) appData[m].logs = {};
-            Object.keys(appData[m].logs).forEach(sId => {
-                let sLogs = appData[m].logs[sId];
-                if (sLogs) {
-                    Object.keys(sLogs).forEach(dIdx => {
-                        if (sLogs[dIdx] && !sLogs[dIdx].customTrades) {
-                            sLogs[dIdx].customTrades = [
+                if (!appData[m].data) appData[m].data = {};
+                if (!appData[m].data[s.id]) {
+                    appData[m].data[s.id] = { workers: ["盧明君", "林智宇", "吳炫德", "邱龍展"], days: [] };
+                }
+                let siteDays = appData[m].data[s.id].days;
+                if (!Array.isArray(siteDays)) siteDays = [];
+                // 確保天數足夠
+                for (let i = siteDays.length + 1; i <= daysCount; i++) {
+                    siteDays.push({ 
+                        dayIndex: i, 
+                        dateStr: `${i}日`, 
+                        amWorkers: [], 
+                        amOtherCount: 0, 
+                        amProject: '', 
+                        amTime: '', 
+                        amPhotoName: '', 
+                        amPhoto: '', 
+                        amPhotoUrl: '', 
+                        pmWorkers: [], 
+                        pmOtherCount: 0, 
+                        pmProject: '', 
+                        pmTime: '', 
+                        pmPhotoName: '', 
+                        pmPhoto: '', 
+                        pmPhotoUrl: '', 
+                        note: '' 
+                    });
+                }
+                appData[m].data[s.id].days = siteDays;
+
+                if (!appData[m].logs) appData[m].logs = {};
+                if (!appData[m].logs[s.id]) appData[m].logs[s.id] = {};
+                let siteLogs = appData[m].logs[s.id];
+                for (let i = 1; i <= daysCount; i++) {
+                    if (!siteLogs[i]) {
+                        siteLogs[i] = { 
+                            selectedSiteId: s.id, 
+                            weatherAm: "晴", 
+                            weatherPm: "晴", 
+                            workersSummary: "", 
+                            progress: "", 
+                            trades: {}, 
+                            customTrades: [
                                 { name: "自訂工1", val: "" },
                                 { name: "自訂工2", val: "" },
                                 { name: "自訂工3", val: "" }
-                            ];
-                        }
-                    });
+                            ], 
+                            sampling: "", 
+                            notice: "", 
+                            important: "" 
+                        };
+                    } else if (!siteLogs[i].customTrades) {
+                        siteLogs[i].customTrades = [
+                            { name: "自訂工1", val: "" },
+                            { name: "自訂工2", val: "" },
+                            { name: "自訂工3", val: "" }
+                        ];
+                    }
                 }
             });
+
+            if (!appData[m].meta) appData[m].meta = {};
+            appData[m].sites.forEach(s => {
+                if (s.isWarrantyRoot) return;
+                if (!appData[m].meta[s.id]) {
+                    appData[m].meta[s.id] = { startDate: '', duration: 0, durationType: '日曆天', extension: 0, suspensionDate: '', resumptionDate: '' };
+                }
+            });
+
             if (!appData[m].warrantySubSites) appData[m].warrantySubSites = {};
             if (!appData[m].warrantySubSites['warranty_pool']) {
                 appData[m].warrantySubSites['warranty_pool'] = [];
@@ -839,10 +905,11 @@
         ];
 
         appData[val] = { sites: newSites, data: {}, logs: {}, meta: {}, customSiteNames: {}, warrantySubSites: { 'warranty_pool': [] } };
+        let daysCount = getDaysInMonth(val);
         newSites.forEach(site => {
             if (site.isWarrantyRoot) return;
             let dayList = []; let siteLogs = {};
-            for (let i = 1; i <= 30; i++) {
+            for (let i = 1; i <= daysCount; i++) {
                 dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amOtherCount: 0, amProject: '', amTime: '', amPhotoName: '', amPhoto: '', amPhotoUrl: '', pmWorkers: [], pmOtherCount: 0, pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', pmPhotoUrl: '', note: '' });
                 siteLogs[i] = { 
                     selectedSiteId: site.id, 
@@ -886,8 +953,9 @@
             monthSites.push(newSiteObj);
         }
 
+        let daysCount = getDaysInMonth(currentMonth);
         let dayList = []; let siteLogs = {};
-        for (let i = 1; i <= 30; i++) {
+        for (let i = 1; i <= daysCount; i++) {
             dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amOtherCount: 0, amProject: '', amTime: '', amPhotoName: '', amPhoto: '', amPhotoUrl: '', pmWorkers: [], pmOtherCount: 0, pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', pmPhotoUrl: '', note: '' });
             siteLogs[i] = { 
                 selectedSiteId: siteId, 
@@ -1659,7 +1727,7 @@
             let sortedPmWorkers = sortSelectedWorkersBySiteMaster(expandedPm, sWorkers);
             let pmStr = sortedPmWorkers.length > 0 ? sortedPmWorkers.join('、') : '無';
             let actualCount = getActualWorkerCount(dData.pmWorkers, dData.pmOtherCount);
-            let unworked = sWorkers.filter(w => !(dData.amWorkers || []).includes(w) && !(dData.pmWorkers || []).includes(w)).join('、') || '無';
+            let unworked = sWorkers.filter(w => !(dData.pmWorkers || []).includes(w) && !(dData.pmWorkers || []).includes(w)).join('、') || '無';
             pmR.push(
 `下午出工：共${actualCount}人（${pmStr}），未出工：${unworked}
 案場：${site.name}
@@ -1688,14 +1756,15 @@
         const select = document.getElementById('log-date-select');
         if (!select) return;
         select.innerHTML = '';
-        for (let i = 1; i <= 30; i++) { select.add(new Option(`${i}日`, i)); }
+        let daysCount = getDaysInMonth(currentMonth);
+        for (let i = 1; i <= daysCount; i++) { select.add(new Option(`${i}日`, i)); }
 
         let todayDate = new Date();
         let tMonth = todayDate.getMonth() + 1;
         let tDay = todayDate.getDate();
         let targetMonthStr = `${todayDate.getFullYear() - 1911}年${tMonth}月`;
 
-        if (targetMonthStr === currentMonth && tDay >= 1 && tDay <= 30) {
+        if (targetMonthStr === currentMonth && tDay >= 1 && tDay <= daysCount) {
             select.value = tDay;
         } else {
             select.value = 1;
@@ -2063,7 +2132,8 @@ ${tText}
                     <tbody>
             `;
 
-            for (let i = 1; i <= 31; i++) {
+            let daysCount = getDaysInMonth(currentMonth);
+            for (let i = 1; i <= daysCount; i++) {
                 let log = siteLogs[i];
                 if (!log) continue;
                 let dayWeekday = getWeekdayString(currentMonth, i);
@@ -2394,7 +2464,8 @@ ${tText}
                 ['日期', '星期', '上午天氣', '下午天氣', '出工人員名單', '今日施工進度', '各工種出工人數細目', '施工取樣試驗紀錄', '通知協力廠商事項', '重要事項紀錄']
             ];
 
-            for (let i = 1; i <= 31; i++) {
+            let daysCount = getDaysInMonth(currentMonth);
+            for (let i = 1; i <= daysCount; i++) {
                 let log = siteLogs[i];
                 if (!log) continue;
                 let dayWeekday = getWeekdayString(currentMonth, i);
