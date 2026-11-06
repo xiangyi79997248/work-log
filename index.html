@@ -105,6 +105,11 @@
         .btn-yellow { background-color: #D2A2CC !important; color: #3a1a35 !important; font-weight: bold; }
         .btn-green { background-color: #FFD306 !important; color: #333300 !important; font-weight: bold; }
         .btn-teal { background-color: #319795 !important; color: #fff !important; font-weight: bold; }
+        
+        /* 自訂案場下載按鈕專用顏色 */
+        .btn-custom-excel { background-color: #46A3FF !important; color: #ffffff !important; font-weight: bold; }
+        .btn-custom-zip { background-color: #4F9D9D !important; color: #ffffff !important; font-weight: bold; }
+
         .btn-sm { padding: 4px 10px; font-size: 13px; }
 
         .cloud-sync-bar {
@@ -441,8 +446,6 @@
             <h2 style="color: #805ad5; margin-top:0;">📊 全案場 Excel 總表匯出與總覽</h2>
             <div style="margin: 15px 0; display: flex; gap: 12px; flex-wrap: wrap;">
                 <button class="btn btn-red" style="font-size: 15px; padding: 8px 16px;" onclick="exportToExcel()">📥 匯出全部案場出工月總表 (自動含分頁2照片)</button>
-                <button class="btn btn-blue" style="font-size: 15px; padding: 8px 16px;" onclick="exportYearlyToExcel()">📈 匯出全部案場年度總表（含總施作天數）</button>
-                <button class="btn btn-teal" style="font-size: 15px; padding: 8px 16px;" onclick="exportLogSummaryToExcel()">📋 匯出每日詳細施工日誌總表</button>
             </div>
 
             <!-- 總表案場切換列 -->
@@ -522,7 +525,7 @@
             };
             db[m].sites.forEach(site => {
                 if (site.isWarrantyRoot) return;
-                let daysCount = getDaysInMonth(m);
+                let daysCount = m.includes('9月') ? 30 : 31;
                 let dayList = [];
                 let siteLogs = {};
                 for (let i = 1; i <= daysCount; i++) {
@@ -579,16 +582,6 @@
         appData = getInitialDB();
     }
 
-    
-    function getDaysInMonth(monthKey) {
-        let yMatch = monthKey.match(/(\d+)年/);
-        let mMatch = monthKey.match(/(\d+)月/);
-        if (!yMatch || !mMatch) return 31;
-        let westernYear = parseInt(yMatch[1]) + 1911;
-        let month = parseInt(mMatch[1]);
-        return new Date(westernYear, month, 0).getDate();
-    }
-
     function checkDBIntegrity() {
         if (!appData || typeof appData !== 'object' || Object.keys(appData).length === 0) {
             appData = getInitialDB();
@@ -602,83 +595,27 @@
                 appData[m].sites.push({ id: 'warranty_pool', name: '保固中案場', title: '保固中各維修案場管理', isWarrantyRoot: true, fixed: true });
             }
             if (!appData[m].customSiteNames) appData[m].customSiteNames = {};
-            
-            let daysCount = getDaysInMonth(m);
-            
             appData[m].sites.forEach(s => {
-                if (s.isWarrantyRoot) return;
-                if (!appData[m].customSiteNames[s.id]) {
+                if (!s.isWarrantyRoot && !appData[m].customSiteNames[s.id]) {
                     appData[m].customSiteNames[s.id] = s.title || s.name;
                 }
-                if (!appData[m].data) appData[m].data = {};
-                if (!appData[m].data[s.id]) {
-                    appData[m].data[s.id] = { workers: ["盧明君", "林智宇", "吳炫德", "邱龍展"], days: [] };
-                }
-                let siteDays = appData[m].data[s.id].days;
-                if (!Array.isArray(siteDays)) siteDays = [];
-                // 確保天數足夠
-                for (let i = siteDays.length + 1; i <= daysCount; i++) {
-                    siteDays.push({ 
-                        dayIndex: i, 
-                        dateStr: `${i}日`, 
-                        amWorkers: [], 
-                        amOtherCount: 0, 
-                        amProject: '', 
-                        amTime: '', 
-                        amPhotoName: '', 
-                        amPhoto: '', 
-                        amPhotoUrl: '', 
-                        pmWorkers: [], 
-                        pmOtherCount: 0, 
-                        pmProject: '', 
-                        pmTime: '', 
-                        pmPhotoName: '', 
-                        pmPhoto: '', 
-                        pmPhotoUrl: '', 
-                        note: '' 
-                    });
-                }
-                appData[m].data[s.id].days = siteDays;
-
-                if (!appData[m].logs) appData[m].logs = {};
-                if (!appData[m].logs[s.id]) appData[m].logs[s.id] = {};
-                let siteLogs = appData[m].logs[s.id];
-                for (let i = 1; i <= daysCount; i++) {
-                    if (!siteLogs[i]) {
-                        siteLogs[i] = { 
-                            selectedSiteId: s.id, 
-                            weatherAm: "晴", 
-                            weatherPm: "晴", 
-                            workersSummary: "", 
-                            progress: "", 
-                            trades: {}, 
-                            customTrades: [
+            });
+            if (!appData[m].data) appData[m].data = {};
+            if (!appData[m].logs) appData[m].logs = {};
+            Object.keys(appData[m].logs).forEach(sId => {
+                let sLogs = appData[m].logs[sId];
+                if (sLogs) {
+                    Object.keys(sLogs).forEach(dIdx => {
+                        if (sLogs[dIdx] && !sLogs[dIdx].customTrades) {
+                            sLogs[dIdx].customTrades = [
                                 { name: "自訂工1", val: "" },
                                 { name: "自訂工2", val: "" },
                                 { name: "自訂工3", val: "" }
-                            ], 
-                            sampling: "", 
-                            notice: "", 
-                            important: "" 
-                        };
-                    } else if (!siteLogs[i].customTrades) {
-                        siteLogs[i].customTrades = [
-                            { name: "自訂工1", val: "" },
-                            { name: "自訂工2", val: "" },
-                            { name: "自訂工3", val: "" }
-                        ];
-                    }
+                            ];
+                        }
+                    });
                 }
             });
-
-            if (!appData[m].meta) appData[m].meta = {};
-            appData[m].sites.forEach(s => {
-                if (s.isWarrantyRoot) return;
-                if (!appData[m].meta[s.id]) {
-                    appData[m].meta[s.id] = { startDate: '', duration: 0, durationType: '日曆天', extension: 0, suspensionDate: '', resumptionDate: '' };
-                }
-            });
-
             if (!appData[m].warrantySubSites) appData[m].warrantySubSites = {};
             if (!appData[m].warrantySubSites['warranty_pool']) {
                 appData[m].warrantySubSites['warranty_pool'] = [];
@@ -687,7 +624,6 @@
     }
     checkDBIntegrity();
 
-    // 💡 自動取得當前系統民國年月（例如 115年10月），若無則自動取資料庫最新月份
     let todayObj = new Date();
     let currentMinguoYear = todayObj.getFullYear() - 1911;
     let currentMonthNum = todayObj.getMonth() + 1;
@@ -905,11 +841,10 @@
         ];
 
         appData[val] = { sites: newSites, data: {}, logs: {}, meta: {}, customSiteNames: {}, warrantySubSites: { 'warranty_pool': [] } };
-        let daysCount = getDaysInMonth(val);
         newSites.forEach(site => {
             if (site.isWarrantyRoot) return;
             let dayList = []; let siteLogs = {};
-            for (let i = 1; i <= daysCount; i++) {
+            for (let i = 1; i <= 30; i++) {
                 dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amOtherCount: 0, amProject: '', amTime: '', amPhotoName: '', amPhoto: '', amPhotoUrl: '', pmWorkers: [], pmOtherCount: 0, pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', pmPhotoUrl: '', note: '' });
                 siteLogs[i] = { 
                     selectedSiteId: site.id, 
@@ -953,9 +888,8 @@
             monthSites.push(newSiteObj);
         }
 
-        let daysCount = getDaysInMonth(currentMonth);
         let dayList = []; let siteLogs = {};
-        for (let i = 1; i <= daysCount; i++) {
+        for (let i = 1; i <= 30; i++) {
             dayList.push({ dayIndex: i, dateStr: `${i}日`, amWorkers: [], amOtherCount: 0, amProject: '', amTime: '', amPhotoName: '', amPhoto: '', amPhotoUrl: '', pmWorkers: [], pmOtherCount: 0, pmProject: '', pmTime: '', pmPhotoName: '', pmPhoto: '', pmPhotoUrl: '', note: '' });
             siteLogs[i] = { 
                 selectedSiteId: siteId, 
@@ -1727,7 +1661,7 @@
             let sortedPmWorkers = sortSelectedWorkersBySiteMaster(expandedPm, sWorkers);
             let pmStr = sortedPmWorkers.length > 0 ? sortedPmWorkers.join('、') : '無';
             let actualCount = getActualWorkerCount(dData.pmWorkers, dData.pmOtherCount);
-            let unworked = sWorkers.filter(w => !(dData.pmWorkers || []).includes(w) && !(dData.pmWorkers || []).includes(w)).join('、') || '無';
+            let unworked = sWorkers.filter(w => !(dData.amWorkers || []).includes(w) && !(dData.pmWorkers || []).includes(w)).join('、') || '無';
             pmR.push(
 `下午出工：共${actualCount}人（${pmStr}），未出工：${unworked}
 案場：${site.name}
@@ -1756,15 +1690,14 @@
         const select = document.getElementById('log-date-select');
         if (!select) return;
         select.innerHTML = '';
-        let daysCount = getDaysInMonth(currentMonth);
-        for (let i = 1; i <= daysCount; i++) { select.add(new Option(`${i}日`, i)); }
+        for (let i = 1; i <= 30; i++) { select.add(new Option(`${i}日`, i)); }
 
         let todayDate = new Date();
         let tMonth = todayDate.getMonth() + 1;
         let tDay = todayDate.getDate();
         let targetMonthStr = `${todayDate.getFullYear() - 1911}年${tMonth}月`;
 
-        if (targetMonthStr === currentMonth && tDay >= 1 && tDay <= daysCount) {
+        if (targetMonthStr === currentMonth && tDay >= 1 && tDay <= 30) {
             select.value = tDay;
         } else {
             select.value = 1;
@@ -2036,8 +1969,8 @@ ${tText}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 8px; padding: 0 5px; flex-wrap: wrap; gap: 8px;">
                     <h4 style="color: #2d3748; margin: 0; font-size:16px;">📍 案場：${displayTitle}</h4>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn btn-red btn-sm" onclick="exportSingleSiteMonthlyWithPhotos('${site.id}')">📥 下載此案場當月 Excel（含照片）</button>
-                        <button class="btn btn-blue btn-sm" onclick="downloadSingleSitePhotosZip('${site.id}')">🗂️ 打包下載照片 (ZIP)</button>
+                        <button class="btn btn-custom-excel btn-sm" onclick="exportSingleSiteMonthlyWithPhotos('${site.id}')">📥 下載此案場當月 Excel（含照片）</button>
+                        <button class="btn btn-custom-zip btn-sm" onclick="downloadSingleSitePhotosZip('${site.id}')">🗂️ 打包下載照片 (ZIP)</button>
                     </div>
                 </div>
             `;
@@ -2132,8 +2065,7 @@ ${tText}
                     <tbody>
             `;
 
-            let daysCount = getDaysInMonth(currentMonth);
-            for (let i = 1; i <= daysCount; i++) {
+            for (let i = 1; i <= 31; i++) {
                 let log = siteLogs[i];
                 if (!log) continue;
                 let dayWeekday = getWeekdayString(currentMonth, i);
@@ -2173,7 +2105,6 @@ ${tText}
         container.innerHTML = html || '<div style="padding:15px; color:#a0aec0;">尚無施工日誌資料</div>';
     }
 
-    // 匯出全部案場出工月總表（含實體照片總覽分頁）
     async function exportToExcel() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "⏳ 正在處理實體照片嵌入並生成 Excel...";
@@ -2242,7 +2173,6 @@ ${tText}
                 ws.columns.forEach(col => { col.width = 16; });
             }
 
-            // 分頁 2：施工照片總覽
             let photoSheet = workbook.addWorksheet("📷 施工照片總覽");
             photoSheet.addRow(['項次', '案場名稱', '報班日期', '時段', '施工項目', '實體施工照片']);
             photoSheet.columns = [
@@ -2288,7 +2218,6 @@ ${tText}
         }
     }
 
-    // 單案場當月 Excel 下載（含分頁 2 施工照片總覽）
     async function exportSingleSiteMonthlyWithPhotos(siteId) {
         let site = appData[currentMonth].sites.find(s => s.id === siteId);
         if (!site) return;
@@ -2356,7 +2285,6 @@ ${tText}
 
             ws.columns.forEach(col => { col.width = 16; });
 
-            // 分頁 2：此案場照片總覽
             let photoSheet = workbook.addWorksheet("📷 施工照片總覽");
             photoSheet.addRow(['項次', '案場名稱', '報班日期', '時段', '施工項目', '實體施工照片']);
             photoSheet.columns = [
@@ -2401,7 +2329,6 @@ ${tText}
         }
     }
 
-    // 單案場當月實體照片打包下載為 ZIP 壓縮檔
     async function downloadSingleSitePhotosZip(siteId) {
         let site = appData[currentMonth].sites.find(s => s.id === siteId);
         if (!site) return;
@@ -2448,65 +2375,6 @@ ${tText}
         });
     }
 
-    // 匯出每日施工日誌總表
-    function exportLogSummaryToExcel() {
-        let wb = XLSX.utils.book_new();
-
-        appData[currentMonth].sites.forEach(site => {
-            if (site.isWarrantyRoot) return;
-            let siteLogs = appData[currentMonth].logs[site.id];
-            if (!siteLogs) return;
-
-            let displayTitle = (appData[currentMonth].customSiteNames && appData[currentMonth].customSiteNames[site.id]) || site.title || site.name;
-            let rows = [
-                [`${currentMonth} - ${displayTitle} 每日施工日誌總表`],
-                [],
-                ['日期', '星期', '上午天氣', '下午天氣', '出工人員名單', '今日施工進度', '各工種出工人數細目', '施工取樣試驗紀錄', '通知協力廠商事項', '重要事項紀錄']
-            ];
-
-            let daysCount = getDaysInMonth(currentMonth);
-            for (let i = 1; i <= daysCount; i++) {
-                let log = siteLogs[i];
-                if (!log) continue;
-                let dayWeekday = getWeekdayString(currentMonth, i);
-                
-                let tradeDetails = [];
-                tradeList.forEach(t => {
-                    if (log.trades && log.trades[t] && log.trades[t].trim() !== '') {
-                        tradeDetails.push(`${t}:${log.trades[t]}人`);
-                    }
-                });
-                if (log.customTrades) {
-                    log.customTrades.forEach(ct => {
-                        if (ct.val && ct.val.trim() !== '') {
-                            tradeDetails.push(`${ct.name || '自訂'}:${ct.val}人`);
-                        }
-                    });
-                }
-                let tradeStr = tradeDetails.join('、') || '無';
-
-                rows.push([
-                    `${currentMonth}${i}日`,
-                    dayWeekday,
-                    log.weatherAm || '晴',
-                    log.weatherPm || '晴',
-                    log.workersSummary || '',
-                    log.progress || '',
-                    tradeStr,
-                    log.sampling || '',
-                    log.notice || '',
-                    log.important || ''
-                ]);
-            }
-
-            let ws = XLSX.utils.aoa_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, (site.name + "_日誌總表").replace(/[:\\/?*\[\]]/g, "_"));
-        });
-
-        XLSX.writeFile(wb, `全案場_施工日誌總表_${currentMonth}.xlsx`);
-    }
-
-    // 單案場當月 Excel 下載（保固案場專用）
     function exportSingleSiteMonthly(siteId) {
         let site = appData[currentMonth].sites.find(s => s.id === siteId);
         if (!site) return;
@@ -2529,86 +2397,8 @@ ${tText}
         }
     }
 
-    // 全部案場年度總表匯出
-    function exportYearlyToExcel() {
-        let yearMatch = currentMonth.match(/(\d+)年/);
-        if (!yearMatch) { alert('無法辨識當前年份！'); return; }
-        let targetYear = yearMatch[1] + '年';
-        let wb = XLSX.utils.book_new();
-        let allMonths = Object.keys(appData).filter(m => m.startsWith(targetYear));
-        
-        let siteMap = {};
-        allMonths.forEach(m => {
-            appData[m].sites.forEach(s => {
-                let displayTitle = (appData[m].customSiteNames && appData[m].customSiteNames[s.id]) || s.title || s.name;
-                if (!siteMap[s.id]) siteMap[s.id] = { name: s.name, title: displayTitle, isWarrantyRoot: s.isWarrantyRoot };
-            });
-        });
-
-        Object.keys(siteMap).forEach(siteId => {
-            let siteInfo = siteMap[siteId];
-            let siteName = siteInfo.name;
-            if (siteInfo.isWarrantyRoot) {
-                let rows = [[`${targetYear} ${siteName} 年度總表`], []];
-                allMonths.forEach(m => {
-                    let monthData = appData[m];
-                    if (monthData && monthData.warrantySubSites && monthData.warrantySubSites[siteId]) {
-                        let subList = monthData.warrantySubSites[siteId];
-                        rows.push([`${m} 統計明細`]);
-                        rows.push(['日期', '維修案場名稱', '出工人員', '維修項目', '備註']);
-                        subList.forEach(sub => {
-                            rows.push([sub.date || '', sub.name || '', sub.workers || '', sub.project || '', sub.note || '']);
-                        });
-                        rows.push([]);
-                    }
-                });
-                let ws = XLSX.utils.aoa_to_sheet(rows);
-                XLSX.utils.book_append_sheet(wb, ws, siteName.replace(/[:\\/?*\[\]]/g, "_"));
-                return;
-            }
-
-            let rows = [[`${targetYear} ${siteInfo.title || siteName} 年度出工人數統計與施工總表`], []];
-            let totalWorkDays = 0;
-
-            allMonths.forEach(m => {
-                let monthData = appData[m];
-                if (monthData && monthData.data && monthData.data[siteId]) {
-                    let sData = monthData.data[siteId];
-                    let sWorkers = sData.workers || [];
-                    let meta = monthData.meta && monthData.meta[siteId] ? monthData.meta[siteId] : {};
-                    rows.push([`${m} 統計明細 (開工: ${meta.startDate || '未填'}, 工期: ${meta.duration || 0} ${meta.durationType || '日曆天'}, 展延: ${meta.extension || 0})`]);
-                    rows.push(['項次', '日期', '上午人數', '上午名單', '上午工項', '上午時間', '下午人數', '下午名單', '下午工項', '下午時間', '未出工人員', '備註']);
-                    
-                    (sData.days || []).forEach(d => {
-                        let hasWorked = (d.amWorkers && d.amWorkers.length > 0) || (d.pmWorkers && d.pmWorkers.length > 0) || (d.amProject && d.amProject.trim()) || (d.pmProject && d.pmProject.trim());
-                        if (hasWorked) totalWorkDays++;
-                        let sortedAm = sortSelectedWorkersBySiteMaster(d.amWorkers, sWorkers);
-                        let sortedPm = sortSelectedWorkersBySiteMaster(d.pmWorkers, sWorkers);
-                        let unworked = sWorkers.filter(w => !(d.amWorkers || []).includes(w) && !(d.pmWorkers || []).includes(w)).join('、') || '無';
-                        rows.push([
-                            d.dayIndex, `${m}${d.dateStr}`,
-                            (d.amWorkers || []).length, sortedAm.join('、'), d.amProject || '', d.amTime || '',
-                            (d.pmWorkers || []).length, sortedPm.join('、'), d.pmProject || '', d.pmTime || '',
-                            unworked, d.note || ''
-                        ]);
-                    });
-                    rows.push([]);
-                }
-            });
-
-            rows.splice(2, 0, ['🌟 年度總結算：', `此案場在 ${targetYear} 總共施作天數： ${totalWorkDays} 天`]);
-            rows.splice(3, 0, []);
-
-            let ws = XLSX.utils.aoa_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, siteName.replace(/[:\\/?*\[\]]/g, "_"));
-        });
-
-        XLSX.writeFile(wb, `全部案場工程年度總表_${targetYear}.xlsx`);
-    }
-
     initUI();
 
-    // 背景載入雲端資料
     async function autoLoadOnStart() {
         const syncStatus = document.getElementById('sync-status');
         if (syncStatus) syncStatus.innerText = "背景同步雲端中...";
